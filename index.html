@@ -3,22 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Knowledge Hub</title>
+<title>Knowledge Learning Hub — Interactive</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#08080f; color:#e0e0e0; font-family:'Inter',sans-serif; min-height:100vh; }
-  .hero { text-align:center; padding:50px 20px 24px; background:linear-gradient(180deg,rgba(255,215,0,0.04) 0%,transparent 100%); }
-  .hero h1 { font-size:30px; font-weight:700; color:#fff; margin-bottom:6px; }
+  body { background:#08080f; color:#e0e0e0; font-family:'Inter','Tajawal',sans-serif; min-height:100vh; }
+
+  .hero { text-align:center; padding:40px 20px 16px; background:linear-gradient(180deg,rgba(255,215,0,0.04) 0%,transparent 100%); }
+  .hero h1 { font-size:28px; font-weight:800; color:#fff; margin-bottom:4px; letter-spacing:-.5px; }
   .hero h1 span { color:#FFD700; }
-  .hero p { font-size:13px; color:#666; max-width:480px; margin:0 auto; line-height:1.5; }
-  .hero .stats { display:flex; gap:20px; justify-content:center; margin-top:12px; font-size:12px; color:#555; }
+  .hero p { font-size:13px; color:#666; max-width:500px; margin:0 auto; line-height:1.5; }
+  .hero .stats { display:flex; gap:20px; justify-content:center; margin-top:8px; font-size:12px; color:#555; flex-wrap:wrap; }
   .hero .stats strong { color:#888; }
-  .search-bar { max-width:1200px; margin:0 auto; padding:0 20px 12px; }
-  .search-bar input { width:100%; padding:11px 16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; color:#eee; font-size:13px; outline:none; font-family:inherit; transition:border .2s; }
+
+  .tabs { display:flex; max-width:1200px; margin:0 auto; padding:0 20px; gap:4px; overflow-x:auto; scrollbar-width:none; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tab { padding:10px 18px; border-radius:10px 10px 0 0; cursor:pointer; font-size:13px; font-weight:500; white-space:nowrap; transition:all .2s; opacity:.5; border:none; background:transparent; color:#aaa; font-family:inherit; }
+  .tab:hover { opacity:.8; background:rgba(255,255,255,0.03); }
+  .tab.active { opacity:1; background:rgba(255,255,255,0.04); color:#fff; border-bottom:2px solid var(--tab-color); }
+  .tab .badge { font-size:10px; background:rgba(255,255,255,0.08); padding:1px 7px; border-radius:8px; margin-left:6px; color:#888; }
+
+  .search-bar { max-width:1200px; margin:0 auto; padding:0 20px 10px; }
+  .search-bar input { width:100%; padding:10px 16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; color:#eee; font-size:13px; outline:none; font-family:inherit; transition:border .2s; }
   .search-bar input:focus { border-color:rgba(255,215,0,0.3); }
   .search-bar input::placeholder { color:#444; }
-  .grid { max-width:1200px; margin:0 auto; padding:0 20px 50px; display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
+
+  .grid { max-width:1200px; margin:0 auto; padding:0 20px 30px; display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
   .card { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:18px; cursor:pointer; transition:all .25s; position:relative; overflow:hidden; }
   .card::before { content:''; position:absolute; top:0; left:0; width:100%; height:3px; background:var(--c); opacity:.5; transition:opacity .25s; }
   .card:hover { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.12); transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,0,0,0.3); }
@@ -26,128 +38,436 @@
   .card .ch { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
   .card .ci { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
   .card .cn { font-size:14px; font-weight:600; color:var(--c); }
-  .card .cs { font-size:11px; color:#888; line-height:1.4; margin-bottom:8px; }
-  .card .csrc { display:flex; flex-wrap:wrap; gap:4px; }
-  .card .csrc a, .card .csrc span { font-size:9px; padding:2px 7px; background:rgba(255,255,255,0.04); border-radius:10px; color:#555; text-decoration:none; display:inline-block; transition:all .2s; }
-  .card .csrc a:hover { background:rgba(255,255,255,0.08); color:#fff; }
+  .card .cn[dir="rtl"] { font-family:'Tajawal',sans-serif; }
+  .card .cs { font-size:11px; color:#888; line-height:1.4; margin-bottom:6px; }
+  .card .cs[dir="rtl"] { font-family:'Tajawal',sans-serif; }
+  .card .badges { display:flex; gap:4px; flex-wrap:wrap; }
+  .card .badges .b { font-size:9px; padding:2px 8px; border-radius:8px; font-weight:500; letter-spacing:.3px; }
+  .card .badges .b-flash { background:rgba(255,215,0,0.08); color:#FFD700; }
+  .card .badges .b-lang { background:rgba(255,255,255,0.04); color:#888; }
   .empty-state { grid-column:1/-1; text-align:center; padding:40px; color:#555; font-size:14px; }
+
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:900; display:none; }
   .overlay.open { display:block; }
   .panel { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.95); width:90%; max-width:660px; max-height:85vh; background:#12121e; border:1px solid rgba(255,255,255,0.08); border-radius:18px; z-index:1000; padding:28px 24px; overflow-y:auto; display:none; opacity:0; transition:all .3s; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
   .panel.open { display:block; opacity:1; transform:translate(-50%,-50%) scale(1); }
   .panel .p-x { position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:50%; border:none; background:rgba(255,255,255,0.06); color:#888; cursor:pointer; font-size:17px; display:flex; align-items:center; justify-content:center; }
   .panel .p-x:hover { background:rgba(255,255,255,0.12); color:#fff; }
-  .panel .ph { display:flex; align-items:center; gap:10px; margin-bottom:14px; padding-right:36px; }
+  .panel .ph { display:flex; align-items:center; gap:10px; margin-bottom:10px; padding-right:36px; }
   .panel .pi { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
   .panel .pt { font-size:20px; font-weight:700; color:var(--c); }
-  .panel .ps { font-size:13px; color:#888; line-height:1.5; margin-bottom:16px; padding:10px 14px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:3px solid #FFD700; }
-  .panel .psx { font-size:11px; font-weight:600; color:#666; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; margin-top:18px; }
-  .panel .pk { list-style:none; padding:0; }
-  .panel .pk li { padding:9px 12px; margin-bottom:5px; background:rgba(255,255,255,0.02); border-radius:7px; font-size:12px; line-height:1.5; color:#bbb; border-left:2px solid rgba(255,255,255,0.05); transition:all .2s; }
-  .panel .pk li:hover { background:rgba(255,255,255,0.04); border-left-color:var(--c,#FFD700); }
-  .panel .pk li::before { content:'\2022'; color:var(--c,#FFD700); margin-right:7px; font-weight:700; }
-  .panel .psrc { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; }
-  .panel .psrc a { text-decoration:none; display:inline-flex; align-items:center; gap:3px; background:rgba(255,255,255,0.04); padding:3px 10px; border-radius:18px; color:#aaa; font-size:10px; transition:all .2s; }
-  .panel .psrc a:hover { background:rgba(255,255,255,0.08); color:#fff; }
-  .panel .pconn { display:flex; flex-wrap:wrap; gap:5px; }
-  .panel .pconn a { font-size:10px; padding:3px 12px; background:rgba(255,215,0,0.06); border:1px solid rgba(255,215,0,0.12); border-radius:18px; color:#FFD700; cursor:pointer; text-decoration:none; transition:all .2s; }
-  .panel .pconn a:hover { background:rgba(255,215,0,0.12); }
+  .panel .pt[dir="rtl"] { font-family:'Tajawal',sans-serif; }
+  .panel .ps { font-size:13px; color:#888; line-height:1.5; margin-bottom:12px; padding:10px 14px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:3px solid #FFD700; }
+  .panel .ps[dir="rtl"] { border-left:none; border-right:3px solid #FFD700; font-family:'Tajawal',sans-serif; }
+
+  .panel-tabs { display:flex; gap:2px; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .panel-tab { padding:8px 16px; cursor:pointer; font-size:12px; font-weight:500; color:#888; border:none; background:none; font-family:inherit; transition:all .2s; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .panel-tab:hover { color:#bbb; }
+  .panel-tab.active { color:var(--c); border-bottom-color:var(--c); }
+  .panel-tab-content { display:none; }
+  .panel-tab-content.active { display:block; }
+
+  .pk { list-style:none; padding:0; }
+  .pk li { padding:9px 12px; margin-bottom:4px; background:rgba(255,255,255,0.02); border-radius:7px; font-size:12px; line-height:1.5; color:#bbb; border-left:2px solid rgba(255,255,255,0.05); transition:all .2s; }
+  .pk li:hover { background:rgba(255,255,255,0.04); border-left-color:var(--c,#FFD700); }
+  .pk li::before { content:'\2022'; color:var(--c,#FFD700); margin-right:7px; font-weight:700; }
+  .pk li[dir="rtl"] { border-left:none; border-right:2px solid rgba(255,255,255,0.05); font-family:'Tajawal',sans-serif; }
+  .pk li[dir="rtl"]:hover { border-right-color:var(--c,#FFD700); }
+
+  .psrc { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; margin-top:8px; }
+  .psrc a { text-decoration:none; display:inline-flex; align-items:center; gap:3px; background:rgba(255,255,255,0.04); padding:3px 10px; border-radius:18px; color:#aaa; font-size:10px; transition:all .2s; }
+  .psrc a:hover { background:rgba(255,255,255,0.08); color:#fff; }
+  .psx { font-size:11px; font-weight:600; color:#666; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; margin-top:14px; }
+
+  .fc { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:24px; min-height:140px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:all .3s; position:relative; }
+  .fc:hover { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.12); }
+  .fc .fc-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:#666; margin-bottom:8px; }
+  .fc .fc-text { font-size:16px; font-weight:500; text-align:center; max-width:450px; line-height:1.5; color:#eee; }
+  .fc .fc-text[dir="rtl"] { font-family:'Tajawal',sans-serif; }
+  .fc .fc-hint { font-size:11px; color:#555; margin-top:10px; }
+  .fc .fc-emoji { font-size:32px; margin-bottom:8px; }
+  .fc .fc-count { position:absolute; bottom:8px; right:12px; font-size:10px; color:#444; }
+  .fc-buttons { display:none; gap:8px; margin-top:14px; justify-content:center; flex-wrap:wrap; }
+  .fc-buttons.show { display:flex; }
+  .fc-btn { padding:8px 22px; border-radius:10px; border:none; cursor:pointer; font-size:12px; font-weight:600; transition:all .2s; font-family:inherit; }
+  .fc-btn:hover { transform:translateY(-1px); }
+  .fc-btn-easy { background:rgba(76,175,80,0.15); color:#4CAF50; border:1px solid rgba(76,175,80,0.25); }
+  .fc-btn-easy:hover { background:rgba(76,175,80,0.25); }
+  .fc-btn-medium { background:rgba(255,193,7,0.15); color:#FFC107; border:1px solid rgba(255,193,7,0.25); }
+  .fc-btn-medium:hover { background:rgba(255,193,7,0.25); }
+  .fc-btn-hard { background:rgba(244,67,54,0.15); color:#F44336; border:1px solid rgba(244,67,54,0.25); }
+  .fc-btn-hard:hover { background:rgba(244,67,54,0.25); }
+  .fc-progress { display:flex; gap:4px; margin-bottom:12px; justify-content:center; }
+  .fc-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.08); }
+  .fc-dot.done { background:var(--c,#FFD700); }
+  .fc-dot.current { background:var(--c,#FFD700); box-shadow:0 0 6px var(--c,#FFD700); }
+  .fc-stats { font-size:11px; color:#555; text-align:center; margin-bottom:8px; }
+
+  .graph-container { width:100%; height:320px; background:rgba(0,0,0,0.2); border-radius:10px; overflow:hidden; position:relative; }
+  .graph-container svg { width:100%; height:100%; }
+  .graph-container .graph-label { position:absolute; top:10px; left:12px; font-size:10px; color:#555; }
+  .graph-tooltip { position:fixed; display:none; background:rgba(0,0,0,0.9); backdrop-filter:blur(8px); padding:8px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); font-size:12px; z-index:1100; pointer-events:none; }
+  .graph-tooltip .gt-name { font-weight:600; }
+
+  .pconn { display:flex; flex-wrap:wrap; gap:4px; }
+  .pconn a { font-size:10px; padding:3px 12px; background:rgba(255,215,0,0.06); border:1px solid rgba(255,215,0,0.12); border-radius:18px; color:#FFD700; cursor:pointer; text-decoration:none; transition:all .2s; }
+  .pconn a:hover { background:rgba(255,215,0,0.12); }
+
   .panel::-webkit-scrollbar { width:4px; }
   .panel::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
-  @media(max-width:700px){ .grid{grid-template-columns:1fr} .panel{width:95%;padding:18px;max-height:90vh} .hero h1{font-size:22px} }
+  @media(max-width:700px){ .grid{grid-template-columns:1fr} .panel{width:95%;padding:18px;max-height:90vh} .hero h1{font-size:22px} .tab{padding:8px 12px;font-size:12px} }
 </style>
 </head>
 <body>
+
 <div class="hero">
-  <h1>&#x1F9E0; <span>Knowledge Hub</span></h1>
-  <p>Aggregated knowledge from all files concepts, insights, and connections in one place.</p>
+  <h1>🧠 <span>Knowledge Learning Hub</span></h1>
+  <p>Interactive learning platform — explore concepts, master with flashcards, discover connections.</p>
   <div class="stats">
-    <span><strong>13</strong> concepts</span>
+    <span><strong>18</strong> concepts</span>
+    <span><strong>4</strong> sections</span>
+    <span><strong>39</strong> flashcards</span>
     <span><strong>14</strong> sources</span>
-    <span><strong>88</strong> insights</span>
   </div>
 </div>
-<div class="search-bar"><input id="q" type="text" placeholder="Search concepts, insights, or sources..." oninput="f(this.value)"></div>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="search-bar"><input id="q" type="text" placeholder="Search concepts, insights, or flashcards across all sections..." oninput="doSearch(this.value)"></div>
+
 <div class="grid" id="g"></div>
-<div class="overlay" id="ov" onclick="c()"></div>
+
+<div class="overlay" id="ov" onclick="closePanel()"></div>
+
 <div class="panel" id="pn">
-  <button class="p-x" onclick="c()">&#10005;</button>
+  <button class="p-x" onclick="closePanel()">&#10005;</button>
   <div class="ph"><div class="pi" id="pIcon"></div><div class="pt" id="pTitle"></div></div>
   <div class="ps" id="pSum"></div>
-  <div class="psx">&#x1F4A1; Insights & Knowledge</div>
-  <ul class="pk" id="pK"></ul>
-  <div class="psx" style="margin-top:20px;">&#x1F4C4; Sources</div>
-  <div class="psrc" id="pSrc"></div>
-  <div class="psx">&#x1F517; Connections</div>
-  <div class="pconn" id="pConn"></div>
-</div>
-<script>
-const D = {"concepts": [{"id": "hermes-agent", "name": "Hermes Agent", "color": "#2196F3", "summary": "AI agent framework for automating complex workflows via skills, plugins, cron jobs, and multi-agent orchestration.", "knowledge": ["Hermes Agent is an open-source AI agent framework running in the terminal connecting to Telegram, Discord, and other platforms.", "It features a Skills System for reusable workflows, Plugins for extensibility, Cron Jobs for scheduled automation, and persistent Memory.", "Supports multi-agent orchestration with specialized agents working together via structured JSON handoffs.", "Can be configured via YAML for context limits, sub-agent concurrency, cost optimization, and YOLO mode.", "Integrates with Obsidian for long-term memory by reading, writing, searching, and linking notes automatically.", "Supports Tailscale remote gateways for cross-device agent control.", "Skills can be created for repeatable workflows turning multi-step processes into reusable skills.", "Comparison with Odysseus: Hermes offers advanced customization, Skills, Plugins, Cron Jobs, Memory; Odysseus is simpler."], "sources": ["7_hermes_uses.md", "obsidian_hermes.md", "hermes_config.txt", "hermes_work_graph.md", "odysseus_vs_hermes.md", "managing_ai_agents.md", "ai_content_studio.md"], "connections": ["second-brain", "multi-agent", "tailscale", "self-hosting", "obsidian", "knowledge-graph"], "emoji": "&#x1F916;"}, {"id": "second-brain", "name": "Second Brain", "color": "#9C27B0", "summary": "Persistent knowledge system combining Obsidian notes with AI agents for automated knowledge management.", "knowledge": ["A Second Brain is a personal knowledge management system where ideas and notes are interconnected.", "Combining Obsidian with Hermes Agent creates a knowledge flywheel: more notes lead to better AI context and output.", "Hermes Agent reads, writes, searches, and links notes in your Obsidian vault automatically.", "The Graph Engineer skill in Hermes Work organizes scattered notes into connected Knowledge Graphs.", "Dr. Justin Sung's system: Intention, Environment, Process, Review making productive behavior the default path.", "Knowledge management reduces cognitive load and creates compounding systems.", "Graph organization enables serendipitous discovery across domains."], "sources": ["obsidian_hermes.md", "hermes_work_graph.md", "7_hermes_uses.md", "productivity_systems.md"], "connections": ["hermes-agent", "obsidian", "knowledge-graph", "productivity"], "emoji": "&#x1F9E0;"}, {"id": "multi-agent", "name": "Multi-Agent Systems", "color": "#00BCD4", "summary": "Multiple specialized AI agents working together in orchestrated pipelines for complex autonomous workflows.", "knowledge": ["Multi-agent systems use specialized AI agents each with a single responsibility coordinated by an orchestrator.", "5-agent content studio: Atlas (research), Vera (writing), Kite (design), Orin (publishing), Orchestrator with JSON handoffs.", "Ryan Carson ships 22-40 PRs daily using cloud VMs for 50x parallel output and a self-improvement agent.", "Model routing between AI models reduces token costs from $20K to $5K/month.", "Three must-build automations: signup test, watchdog, and self-improvement loop.", "Managing AI agents is the most valuable skill of 2026 half managed from a phone.", "Each agent does one thing well and passes structured data to the next."], "sources": ["ai_content_studio.md", "managing_ai_agents.md", "odysseus_vs_hermes.md", "7_hermes_uses.md"], "connections": ["hermes-agent", "automation", "self-hosting"], "emoji": "&#x1F91D;"}, {"id": "self-hosting", "name": "Self-Hosting", "color": "#4CAF50", "summary": "Deploying applications and services on your own VPS instead of managed cloud platforms.", "knowledge": ["Coolify is an open-source self-hosted Vercel alternative running on a $5/month VPS with Docker.", "Features: automatic CI/CD from Git push, one-click PostgreSQL, free SSL via Let's Encrypt, one-click rollback.", "A 5-agent content studio runs on a $5/month VPS controlled via Telegram with Tailscale.", "Cloud VM is recommended over local for 50x parallel output in AI operations.", "Self-hosting costs less but requires more technical setup than managed platforms.", "Tailscale provides secure access from any device to agents on a VPS.", "Docker makes self-hosting reproducible with simplified dependency management."], "sources": ["coolify_vercel.md", "ai_content_studio.md", "odysseus_vs_hermes.md", "7_hermes_uses.md"], "connections": ["docker", "tailscale", "multi-agent"], "emoji": "&#x1F680;"}, {"id": "tailscale", "name": "Tailscale", "color": "#8BC34A", "summary": "Secure mesh VPN for connecting devices and enabling remote access to self-hosted services.", "knowledge": ["Tailscale creates a secure WireGuard mesh network connecting all devices, servers, and agents.", "Enables remote gateways to control Hermes Agent on a VPS from any device securely.", "Used in AI content studio for secure dashboard access only Tailnet devices can connect.", "No need to open ports, configure firewalls, or manage SSL for internal services.", "Connect Linux, Windows, phones, and tablets in one private network."], "sources": ["7_hermes_uses.md", "ai_content_studio.md"], "connections": ["self-hosting", "multi-agent", "hermes-agent"], "emoji": "&#x1F517;"}, {"id": "obsidian", "name": "Obsidian", "color": "#7C4DFF", "summary": "Local-first Markdown knowledge base with bi-directional linking and graph visualization.", "knowledge": ["Obsidian is a local-first Markdown note-taking app with bi-directional linking and graph views.", "Integrating with Hermes Agent creates persistent AI long-term memory for reading, writing, and linking notes.", "The knowledge flywheel: more notes give better AI context which produces better output and more notes.", "Local-first means plain Markdown files on your device no vendor lock-in.", "Obsidian's Graph View reveals hidden connections and patterns between notes.", "Bi-directional linking builds an interconnected web of compounding knowledge.", "Knowledge Graphs beat folder hierarchies for organizing information."], "sources": ["obsidian_hermes.md", "hermes_work_graph.md", "7_hermes_uses.md"], "connections": ["second-brain", "knowledge-graph", "hermes-agent"], "emoji": "&#x1F4DA;"}, {"id": "knowledge-graph", "name": "Knowledge Graphs", "color": "#FF9800", "summary": "Visual representation of knowledge as interconnected nodes and edges for learning and discovery.", "knowledge": ["Knowledge Graphs represent information as nodes (concepts) and edges (relationships) enabling non-linear discovery.", "Hermes Work's Graph Engineer creates Knowledge Graphs from scattered notes automatically.", "Graph organization enables serendipitous discovery of cross-domain connections.", "Topics in multiple files act as knowledge bridges between different domains.", "Graph views show which concepts are most connected for exploring related ideas.", "Combined with Obsidian they become powerful learning and research tools."], "sources": ["hermes_work_graph.md", "obsidian_hermes.md", "7_hermes_uses.md"], "connections": ["second-brain", "obsidian", "hermes-agent"], "emoji": "&#x1F50D;"}, {"id": "monetization", "name": "Monetization", "color": "#FF5722", "summary": "Strategies for converting users to paid customers through paywalls, pricing, and payment infrastructure.", "knowledge": ["Paywalls are revenue engines multi-step paywalls show 20-40% uplift over single-screen.", "Value-based pricing is most effective for SaaS over cost-plus or competitor-based.", "Upfront pricing before free trial increases conversion by clarifying commitment.", "Discount gamification (spin-the-wheel, social proof) boosts install-to-paid rates.", "13 gateways compared: Stripe, Paddle, Lemon Squeezy (global), PayMob, Fawry (MENA), USDC (crypto).", "Merchant of Record services handle global tax compliance for solo founders.", "Diversify processors to avoid freeze disruptions use Wise/Payoneer for multi-currency."], "sources": ["paywall_50m.md", "payment_gateways_saas.md", "cold_email_saas.txt"], "connections": ["saas", "email-marketing", "conversion"], "emoji": "&#x1F4B0;"}, {"id": "saas", "name": "SaaS Business", "color": "#795548", "summary": "Software-as-a-Service strategies including payments, cold email, and growth tactics.", "knowledge": ["Cold email for SaaS: 7 steps include data gathering, personalization, AIDA, segmentation, and follow-up.", "Email deliverability requires SPF, DKIM, DMARC records and domain warming before campaigns.", "10 templates: initial outreach, follow-up, social proof, breakup, re-engagement.", "3-7 touchpoints across email, LinkedIn, and phone for maximum conversion.", "AIDA and BANT frameworks structure effective sales messaging.", "MENA founders need local gateways like PayMob alongside global Stripe.", "Multi-channel lead generation: cold email plus LinkedIn plus content plus referrals."], "sources": ["cold_email_saas.txt", "payment_gateways_saas.md", "paywall_50m.md"], "connections": ["monetization", "email-marketing", "conversion"], "emoji": "&#x1F6E0;"}, {"id": "email-marketing", "name": "Email Marketing", "color": "#E91E63", "summary": "Cold email and email marketing strategies for SaaS lead generation and customer acquisition.", "knowledge": ["AIDA, BANT, and CHARM are the three main cold email frameworks.", "3-7 touchpoints across email, LinkedIn, and phone most conversions after follow-up 3.", "Personalized curiosity-driven subject lines outperform generic ones.", "SPF, DKIM, DMARC records and domain warming are essential for deliverability.", "Mention company details and recent events without over-personalizing.", "Breakup emails re-engage cold leads who are still interested."], "sources": ["cold_email_saas.txt"], "connections": ["saas", "monetization"], "emoji": "&#x1F4E7;"}, {"id": "automation", "name": "Automation", "color": "#607D8B", "summary": "Automating tasks, deployments, and self-improvement loops for maximum efficiency.", "knowledge": ["Three must-build automations: signup test, watchdog monitoring, self-improvement loop agent.", "Coolify auto-deploys from Git push for automatic CI/CD.", "Self-improvement agent (Grace) ships ~3 fixes/day by running tests and creating PRs.", "Hermes Cron Jobs automate competitor research, briefings, and social posting.", "Hermes Kanban with Resolver agent reviews tasks automatically.", "Skillification turns multi-step workflows into one-command reusable skills.", "Each automation compounds freeing time for more automation."], "sources": ["managing_ai_agents.md", "coolify_vercel.md", "7_hermes_uses.md"], "connections": ["multi-agent", "hermes-agent"], "emoji": "&#x2699;"}, {"id": "productivity", "name": "Productivity", "color": "#9C27B0", "summary": "Evidence-based productivity frameworks focusing on systems, environment, and cognitive load.", "knowledge": ["Dr. Justin Sung's 4-part system: Intention, Environment, Process, Review.", "Systems over willpower design your path of least resistance for productivity.", "Reduce friction for good habits and increase it for bad ones through environment design.", "Match energy patterns to tasks creative work when energy peaks administrative when low.", "Break complex tasks into chunks use checklists and eliminate decision fatigue.", "Attach new habits to existing ones for automatic execution.", "Weekly reviews assess and adjust the system for continuous improvement."], "sources": ["productivity_systems.md", "7_hermes_uses.md"], "connections": ["second-brain", "hermes-agent"], "emoji": "&#x26A1;"}, {"id": "quran", "name": "Surat Al-Baqarah", "color": "#4CAF50", "summary": "Virtues and impact of Surah Al-Baqarah on a Muslim's life and the honor awaiting its people.", "knowledge": ["Surah Al-Baqarah is the longest Quranic surah. The Prophet said: Taking it is a blessing, leaving it is a regret, sorcerers cannot withstand it.", "It and Surah Al-Imran are Al-Zahrawan (the two luminous ones) they come on Judgment Day like clouds pleading for their companion.", "Blessings: barakah in time, provision, family, work; protection from sorcerers and devils.", "Parents of a Quran memorizer are honored on Judgment Day with a crown.", "The Quran intercedes: Recite and ascend your rank is at the last verse you recite.", "Four stages: recitation, understanding, memorization, application. Every Muslim should have a Mushaf at home.", "Yaqeen (certainty) is higher than tasdeeq (belief) it settles in the heart with full conviction."], "sources": ["surat_albaqarah_fadl.txt", "surah_baqarah_change_life.txt"], "connections": [], "emoji": "&#x1F4D6;"}]};
-const U = {"7_hermes_uses.md": "https://drive.google.com/file/d/1JQq0t7iJQXwKlwM_9xYxdsepKRuGRRJO/view", "obsidian_hermes.md": "https://drive.google.com/file/d/1ZpxWtSKOYDwygHV9lI12B089Xm3Ofuuv/view", "hermes_config.txt": "https://drive.google.com/document/d/1M4u5tpNh05-8RpftztBd8v5RsNWK7XzapR0PMrZXqok/edit", "hermes_work_graph.md": "https://drive.google.com/file/d/1l499k9vSFEfXR9-qc-hdphWAP-VuUw4O/view", "odysseus_vs_hermes.md": "https://drive.google.com/file/d/16sFiMQsVaiiiu3BJ7nGK1oDeQuQlcRWy/view", "managing_ai_agents.md": "https://drive.google.com/file/d/1Zi93ODou57S32hRUoWq3m9P1QDEIhC64/view", "ai_content_studio.md": "https://drive.google.com/file/d/1k5VbclAIROpUiYzsV7V54sbfI_acpWV0/view", "productivity_systems.md": "https://drive.google.com/file/d/1G_4j5qZ5pI8AFLQajUJArOdqnQWdBJOR/view", "coolify_vercel.md": "https://drive.google.com/file/d/1Mp6uGod7iMuaSGJbw34zuAX1JG73QiSi/view", "paywall_50m.md": "https://drive.google.com/file/d/1CO2Jee1D-YNE-9sGZkPxtcplXw31n4T2/view", "payment_gateways_saas.md": "https://drive.google.com/file/d/1ivgR_oWyHsoXDH0OjW6gg27qCHFA7UFi/view", "cold_email_saas.txt": "https://drive.google.com/file/d/1ed6zEFXkO2AB27FX9PgT8H1sZU_ztkUg/view", "surat_albaqarah_fadl.txt": "https://drive.google.com/file/d/1l3WGTdKRrJF0DrY7ZeL1-GglnufOvtK2/view", "surah_baqarah_change_life.txt": "https://drive.google.com/file/d/1qE7AiAm90lA-7YFfbosEzqBTRQq34xfb/view"};
-const C = D.concepts;
-const g = document.getElementById('g');
 
-function render(q) {
-  g.innerHTML = '';
-  const ql = (q||'').toLowerCase();
-  let v = 0;
-  C.forEach(c => {
-    if (ql && !c.name.toLowerCase().includes(ql) && !c.summary.toLowerCase().includes(ql) && !c.knowledge.some(k=>k.toLowerCase().includes(ql))) return;
-    v++;
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.style.setProperty('--c', c.color);
-    const bg = c.color + '1a';
-    let srcs = c.sources.slice(0,4).map(s => {
-      const u = U[s];
-      return u ? '<a href="'+u+'" target="_blank">'+s+'</a>' : '<span>'+s+'</span>';
-    }).join('');
-    if (c.sources.length > 4) srcs += '<span>+'+(c.sources.length-4)+'</span>';
-    card.innerHTML = '<div class="ch"><div class="ci" style="background:'+bg+'">'+c.emoji+'</div><div class="cn">'+c.name+'</div></div><div class="cs">'+c.summary+'</div><div class="csrc">'+srcs+'</div>';
-    card.addEventListener('click',()=>open(c));
-    g.appendChild(card);
-  });
-  if (!v) g.innerHTML = '<div class="empty-state">No matching concepts &#x1F50D;</div>';
+  <div class="panel-tabs" id="pTabs">
+    <button class="panel-tab active" data-tab="info" onclick="switchPanelTab(this,'info')">&#x1F4A1; Knowledge</button>
+    <button class="panel-tab" data-tab="flash" onclick="switchPanelTab(this,'flash')">&#x1F0CF; Flashcards</button>
+    <button class="panel-tab" data-tab="graph" onclick="switchPanelTab(this,'graph')">&#x1F517; Graph</button>
+  </div>
+
+  <div class="panel-tab-content active" id="tabInfo">
+    <ul class="pk" id="pK"></ul>
+    <div class="psx">&#x1F4C4; Sources</div>
+    <div class="psrc" id="pSrc"></div>
+    <div class="psx" style="margin-top:16px;">&#x1F517; Connections</div>
+    <div class="pconn" id="pConn"></div>
+  </div>
+
+  <div class="panel-tab-content" id="tabFlash">
+    <div class="fc-stats" id="fcStats"></div>
+    <div class="fc-progress" id="fcProgress"></div>
+    <div class="fc" id="fcCard" onclick="fcReveal()">
+      <div class="fc-emoji" id="fcEmoji">&#x1F0CF;</div>
+      <div class="fc-label" id="fcLabel">QUESTION</div>
+      <div class="fc-text" id="fcText">Click to start</div>
+      <div class="fc-hint" id="fcHint">Click to reveal answer</div>
+      <div class="fc-count" id="fcCount">0/0</div>
+    </div>
+    <div class="fc-buttons" id="fcBtns">
+      <button class="fc-btn fc-btn-hard" onclick="fcRate(1)">&#x1F534; Hard</button>
+      <button class="fc-btn fc-btn-medium" onclick="fcRate(2)">&#x1F7E1; Medium</button>
+      <button class="fc-btn fc-btn-easy" onclick="fcRate(3)">&#x1F7E2; Easy</button>
+    </div>
+  </div>
+
+  <div class="panel-tab-content" id="tabGraph">
+    <div class="graph-container" id="pGraph"><div class="graph-label">Loading graph...</div></div>
+  </div>
+</div>
+
+<div class="graph-tooltip" id="graphTooltip"><div class="gt-name"></div></div>
+
+<script>
+const SECTIONS = [{"id": "ai", "name_en": "Artificial Intelligence", "name_ar": "الذكاء الاصطناعي", "icon": "🤖", "color": "#2196F3", "dir": "ai"}, {"id": "marketing", "name_en": "Marketing & Business", "name_ar": "التسويق والأعمال", "icon": "📢", "color": "#FF9800", "dir": "marketing"}, {"id": "productivity", "name_en": "Productivity", "name_ar": "الإنتاجية", "icon": "⚡", "color": "#9C27B0", "dir": "productivity"}, {"id": "quran", "name_en": "Quran & Faith", "name_ar": "القرآن والإيمان", "icon": "📖", "color": "#4CAF50", "dir": "quran"}];
+const CONCEPTS = [{"id": "hermes-agent", "section": "ai", "name": "Hermes Agent", "emoji": "🤖", "color": "#2196F3", "summary": {"text": "Open-source AI agent framework for terminal. Skills, cron, multi-agent, Telegram/Discord.", "lang": "en"}, "knowledge": [{"text": "Hermes Agent is an open-source AI agent framework running in the terminal, connecting to Telegram, Discord, and other platforms.", "lang": "en"}, {"text": "Features: Skills System for reusable workflows, Plugins for extensibility, Cron Jobs for scheduled automation, persistent Memory.", "lang": "en"}, {"text": "Supports multi-agent orchestration with specialized agents working together via structured JSON handoffs.", "lang": "en"}, {"text": "Can be configured via YAML for context limits, sub-agent concurrency, cost optimization, and YOLO mode.", "lang": "en"}, {"text": "Integrates with Obsidian for long-term memory by reading, writing, searching, and linking notes automatically.", "lang": "en"}, {"text": "Supports Tailscale remote gateways for cross-device agent control.", "lang": "en"}, {"text": "Skills can be created for repeatable workflows, turning multi-step processes into reusable skills.", "lang": "en"}], "flashcards": [{"q": {"text": "What is Hermes Agent?", "lang": "en"}, "a": {"text": "Open-source AI agent framework running in terminal. Features: skills, plugins, cron, memory, multi-agent orchestration, Telegram/Discord integration.", "lang": "en"}}, {"q": {"text": "What are the 5 main features?", "lang": "en"}, "a": {"text": "Skills System, Plugins, Cron Jobs, persistent Memory, Multi-agent orchestration.", "lang": "en"}}, {"q": {"text": "How does Hermes integrate with Obsidian?", "lang": "en"}, "a": {"text": "It reads, writes, searches, and links notes in your Obsidian vault automatically, creating persistent AI long-term memory.", "lang": "en"}}], "sources": ["7_hermes_uses.md", "hermes_config.txt", "odysseus_vs_hermes.md"], "connections": ["second-brain", "multi-agent", "self-hosting", "obsidian", "knowledge-graph", "hermes-config"]}, {"id": "second-brain", "section": "ai", "name": "Second Brain", "emoji": "🧠", "color": "#9C27B0", "summary": {"text": "Persistent knowledge system: Obsidian + AI agents for automated knowledge management and discovery.", "lang": "en"}, "knowledge": [{"text": "A Second Brain is a personal knowledge management system where ideas and notes are interconnected.", "lang": "en"}, {"text": "Combining Obsidian with Hermes Agent creates a knowledge flywheel: more notes lead to better AI context and output.", "lang": "en"}, {"text": "Hermes Agent reads, writes, searches, and links notes in your Obsidian vault automatically.", "lang": "en"}, {"text": "Knowledge Graphs beat folder hierarchies for organizing information. They enable serendipitous discovery across domains.", "lang": "en"}, {"text": "Knowledge management reduces cognitive load and creates compounding systems.", "lang": "en"}], "flashcards": [{"q": {"text": "What is a Second Brain?", "lang": "en"}, "a": {"text": "A personal knowledge management system where ideas and notes are interconnected for easy retrieval and discovery.", "lang": "en"}}, {"q": {"text": "What is the knowledge flywheel?", "lang": "en"}, "a": {"text": "More notes -> better AI context -> better output -> more notes. A compounding loop of knowledge growth.", "lang": "en"}}], "sources": ["obsidian_hermes.md", "7_hermes_uses.md"], "connections": ["hermes-agent", "obsidian", "knowledge-graph"]}, {"id": "multi-agent", "section": "ai", "name": "Multi-Agent Systems", "emoji": "👥", "color": "#00BCD4", "summary": {"text": "Specialized AI agents coordinated by an orchestrator through structured JSON handoffs.", "lang": "en"}, "knowledge": [{"text": "Multi-agent systems use specialized AI agents each with a single responsibility coordinated by an orchestrator.", "lang": "en"}, {"text": "5-agent content studio: Atlas (research), Vera (writing), Kite (design), Orin (publishing), Orchestrator.", "lang": "en"}, {"text": "Ryan Carson ships 22-40 PRs daily using cloud VMs for 50x parallel output and a self-improvement agent.", "lang": "en"}, {"text": "Model routing between AI models reduces token costs from $20K to $5K/month.", "lang": "en"}, {"text": "Each agent does one thing well and passes structured data to the next.", "lang": "en"}], "flashcards": [{"q": {"text": "What is a multi-agent system?", "lang": "en"}, "a": {"text": "Multiple specialized AI agents, each with one responsibility, coordinated by an orchestrator through structured data handoffs.", "lang": "en"}}, {"q": {"text": "What is the 5-agent content studio stack?", "lang": "en"}, "a": {"text": "Atlas (research) -> Vera (writing) -> Kite (design) -> Orin (publishing) -> Orchestrator", "lang": "en"}}], "sources": ["ai_content_studio.md", "managing_ai_agents.md", "7_hermes_uses.md"], "connections": ["hermes-agent", "automation", "self-hosting", "ai-content-studio"]}, {"id": "self-hosting", "section": "ai", "name": "Self-Hosting & Coolify", "emoji": "🚀", "color": "#4CAF50", "summary": {"text": "Deploy apps on your own VPS using Coolify. Open-source Vercel alternative with Docker auto-deployment.", "lang": "en"}, "knowledge": [{"text": "Coolify is an open-source self-hosted Vercel alternative running on a $5/month VPS with Docker.", "lang": "en"}, {"text": "Features: automatic CI/CD from Git push, one-click PostgreSQL, free SSL via Let's Encrypt, one-click rollback.", "lang": "en"}, {"text": "A 5-agent content studio runs on a $5/month VPS controlled via Telegram with Tailscale.", "lang": "en"}, {"text": "Cloud VM is recommended over local for 50x parallel output in AI operations.", "lang": "en"}, {"text": "Self-hosting costs less but requires more technical setup than managed platforms. Docker makes it reproducible.", "lang": "en"}], "flashcards": [{"q": {"text": "What is Coolify?", "lang": "en"}, "a": {"text": "Open-source self-hosted Vercel alternative. Runs on $5/mo VPS with Docker, auto CI/CD, one-click databases and SSL.", "lang": "en"}}, {"q": {"text": "Why self-host instead of managed platforms?", "lang": "en"}, "a": {"text": "Lower cost ($5/mo vs $20+), full control, reproducible via Docker. Trade-off: more technical setup required.", "lang": "en"}}], "sources": ["coolify_vercel.md", "ai_content_studio.md", "7_hermes_uses.md"], "connections": ["multi-agent", "tailscale", "ai-content-studio"]}, {"id": "obsidian", "section": "ai", "name": "Obsidian", "emoji": "📚", "color": "#7C4DFF", "summary": {"text": "Local-first Markdown knowledge base with bi-directional linking and graph visualization.", "lang": "en"}, "knowledge": [{"text": "Obsidian is a local-first Markdown note-taking app with bi-directional linking and graph views.", "lang": "en"}, {"text": "Integrating with Hermes Agent creates persistent AI long-term memory.", "lang": "en"}, {"text": "Local-first means plain Markdown files on your device - no vendor lock-in.", "lang": "en"}, {"text": "Obsidian's Graph View reveals hidden connections and patterns between notes.", "lang": "en"}, {"text": "Bi-directional linking builds an interconnected web of compounding knowledge.", "lang": "en"}], "flashcards": [{"q": {"text": "What makes Obsidian different?", "lang": "en"}, "a": {"text": "Local-first Markdown with bi-directional linking and graph visualization. No vendor lock-in, plain files on your device.", "lang": "en"}}, {"q": {"text": "How does Obsidian + Hermes Agent work?", "lang": "en"}, "a": {"text": "Hermes reads, writes, searches, and links notes in your Obsidian vault, turning it into AI long-term memory.", "lang": "en"}}], "sources": ["obsidian_hermes.md", "7_hermes_uses.md"], "connections": ["hermes-agent", "second-brain", "knowledge-graph"]}, {"id": "ai-content-studio", "section": "ai", "name": "AI Content Studio", "emoji": "🎬", "color": "#E91E63", "summary": {"text": "Autonomous content pipeline with 5 agents on a $5 VPS, controlled via Telegram.", "lang": "en"}, "knowledge": [{"text": "5 specialized agents: Atlas (research), Vera (writing), Kite (design), Orin (publishing), Orchestrator.", "lang": "en"}, {"text": "Each agent has one responsibility and passes structured JSON data to the next.", "lang": "en"}, {"text": "Controlled entirely via Telegram. Runs on a $5/month VPS with Tailscale for secure access.", "lang": "en"}, {"text": "Produces: research briefs, written content, visuals, and published output autonomously.", "lang": "en"}], "flashcards": [{"q": {"text": "What are the 5 Content Studio agents?", "lang": "en"}, "a": {"text": "Atlas (research), Vera (writing), Kite (design), Orin (publishing), Orchestrator", "lang": "en"}}, {"q": {"text": "How is the studio controlled?", "lang": "en"}, "a": {"text": "Entirely via Telegram. No manual intervention needed once set up.", "lang": "en"}}], "sources": ["ai_content_studio.md"], "connections": ["multi-agent", "self-hosting", "tailscale", "hermes-agent"]}, {"id": "automation", "section": "ai", "name": "AI Automation", "emoji": "⚙️", "color": "#607D8B", "summary": {"text": "Automating tasks, deployments, and self-improvement loops for maximum efficiency.", "lang": "en"}, "knowledge": [{"text": "Three must-build automations: signup test, watchdog monitoring, self-improvement loop agent.", "lang": "en"}, {"text": "Self-improvement agent (Grace) ships ~3 fixes/day by running tests and creating PRs.", "lang": "en"}, {"text": "Hermes Cron Jobs automate competitor research, briefings, and social posting.", "lang": "en"}, {"text": "Skillification turns multi-step workflows into one-command reusable skills.", "lang": "en"}], "flashcards": [{"q": {"text": "What are the 3 must-build automations?", "lang": "en"}, "a": {"text": "1) Signup flow test, 2) Watchdog monitoring, 3) Self-improvement loop agent.", "lang": "en"}}, {"q": {"text": "What is skillification?", "lang": "en"}, "a": {"text": "Turning multi-step workflows into one-command reusable skills for instant execution.", "lang": "en"}}], "sources": ["managing_ai_agents.md", "7_hermes_uses.md"], "connections": ["multi-agent", "hermes-agent"]}, {"id": "hermes-config", "section": "ai", "name": "Hermes Configuration", "emoji": "🔧", "color": "#455A64", "summary": {"text": "Optimizing Hermes Agent via YAML: context limits, memory, sub-agents, cost, compression.", "lang": "en"}, "knowledge": [{"text": "Configure context management to balance quality vs token usage.", "lang": "en"}, {"text": "File limits control how many files the agent can read/write per session.", "lang": "en"}, {"text": "Memory settings define what persists between sessions.", "lang": "en"}, {"text": "Sub-agent concurrency: how many parallel tasks an orchestrator can spawn.", "lang": "en"}, {"text": "Cost optimization: model routing, token budgets, and compression strategies.", "lang": "en"}, {"text": "YOLO mode: faster execution with reduced safety checks for development.", "lang": "en"}], "flashcards": [{"q": {"text": "What can you configure in Hermes Agent YAML?", "lang": "en"}, "a": {"text": "Context limits, file limits, memory persistence, sub-agent concurrency, cost optimization, compression, YOLO mode.", "lang": "en"}}, {"q": {"text": "What is YOLO mode?", "lang": "en"}, "a": {"text": "Faster execution mode with reduced safety checks, optimized for development.", "lang": "en"}}], "sources": ["hermes_config.txt"], "connections": ["hermes-agent"]}, {"id": "knowledge-graph", "section": "ai", "name": "Knowledge Graphs", "emoji": "🔍", "color": "#FF9800", "summary": {"text": "Visual knowledge representation as interconnected nodes for non-linear discovery.", "lang": "en"}, "knowledge": [{"text": "Knowledge Graphs represent information as nodes (concepts) and edges (relationships).", "lang": "en"}, {"text": "They enable non-linear discovery - finding unexpected connections between domains.", "lang": "en"}, {"text": "Topics shared across multiple files act as knowledge bridges.", "lang": "en"}, {"text": "Combined with Obsidian they become powerful learning and research tools.", "lang": "en"}], "flashcards": [{"q": {"text": "What is a Knowledge Graph?", "lang": "en"}, "a": {"text": "Nodes (concepts) connected by edges (relationships) enabling non-linear discovery of information.", "lang": "en"}}, {"q": {"text": "Why are Knowledge Graphs effective?", "lang": "en"}, "a": {"text": "They reveal hidden cross-domain connections and enable serendipitous discovery.", "lang": "en"}}], "sources": ["hermes_work_graph.md", "obsidian_hermes.md", "7_hermes_uses.md"], "connections": ["second-brain", "obsidian", "hermes-agent"]}, {"id": "tailscale", "section": "ai", "name": "Tailscale", "emoji": "🔗", "color": "#8BC34A", "summary": {"text": "Secure WireGuard mesh VPN connecting all devices for remote access without open ports.", "lang": "en"}, "knowledge": [{"text": "Tailscale creates a secure WireGuard mesh network connecting all devices, servers, and agents.", "lang": "en"}, {"text": "Enables remote gateways to control Hermes Agent on a VPS from any device.", "lang": "en"}, {"text": "No need to open ports, configure firewalls, or manage SSL for internal services.", "lang": "en"}], "flashcards": [{"q": {"text": "What is Tailscale?", "lang": "en"}, "a": {"text": "A secure WireGuard-based mesh VPN connecting all devices without opening ports.", "lang": "en"}}, {"q": {"text": "Why use Tailscale with self-hosted services?", "lang": "en"}, "a": {"text": "Secure access without opening ports, configuring firewalls, or managing SSL.", "lang": "en"}}], "sources": ["7_hermes_uses.md", "ai_content_studio.md"], "connections": ["self-hosting", "multi-agent", "hermes-agent"]}, {"id": "odysseus-vs-hermes", "section": "ai", "name": "مقارنة Odysseus vs Hermes", "emoji": "⚔️", "color": "#FF5722", "summary": {"text": "مقارنة شاملة بين Odysseus و Hermes Agent — أيهما تختار حسب خبرتك واحتياجك.", "lang": "ar"}, "knowledge": [{"text": "Hermes Agent يتميز بـ: Skills System، Plugins، Cron Jobs، Memory، تخصيص متقدم.", "lang": "ar"}, {"text": "Odysseus أبسط في الاستخدام ومناسب للمبتدئين لكنه أقل مرونة.", "lang": "ar"}, {"text": "Hermes يدعم multi-agent orchestration مع JSON handoffs منظم.", "lang": "ar"}, {"text": "الاختيار يعتمد على: الخبرة التقنية، حجم المشروع، الحاجة للتخصيص.", "lang": "ar"}], "flashcards": [{"q": {"text": "متى تختار Hermes Agent؟", "lang": "ar"}, "a": {"text": "عندما تحتاج تخصيص متقدم، Skills System، Multi-agent orchestration، تكامل مع Obsidian و Tailscale.", "lang": "ar"}}, {"q": {"text": "متى تختار Odysseus؟", "lang": "ar"}, "a": {"text": "للمبتدئين والمشاريع الصغيرة التي تريد حلاً بسيطاً سريع النشر.", "lang": "ar"}}], "sources": ["odysseus_vs_hermes.md"], "connections": ["hermes-agent"]}, {"id": "arabic-knowledge-org", "section": "ai", "name": "تنظيم المعرفة بالخرائط", "emoji": "🗺️", "color": "#FF5722", "summary": {"text": "Hermes Work + Graph Engineer لتحويل الملاحظات المبعثرة إلى خرائط معرفية.", "lang": "ar"}, "knowledge": [{"text": "Graph Engineer هي أداة في Hermes Work لإنشاء خرائط معرفية من الملاحظات تلقائياً.", "lang": "ar"}, {"text": "الخرائط المعرفية تكتشف روابط خفية بين المواضيع المختلفة.", "lang": "ar"}, {"text": "المواضيع المتكررة تعمل كجسور معرفية بين المجالات.", "lang": "ar"}, {"text": "خرائط المعرفة تتفوق على التنظيم الهرمي للمجلدات.", "lang": "ar"}], "flashcards": [{"q": {"text": "ما هو Graph Engineer؟", "lang": "ar"}, "a": {"text": "أداة في Hermes Work تحول الملاحظات المبعثرة إلى خرائط معرفية تلقائياً.", "lang": "ar"}}, {"q": {"text": "لماذا الخرائط المعرفية أفضل من المجلدات؟", "lang": "ar"}, "a": {"text": "تكتشف روابط خفية، تمكن من اكتشاف Connections غير متوقعة.", "lang": "ar"}}], "sources": ["hermes_work_graph.md"], "connections": ["knowledge-graph", "second-brain", "hermes-agent"]}, {"id": "paywall-strategy", "section": "ai", "name": "Paywall Strategy", "emoji": "💰", "color": "#FF5722", "summary": {"text": "Paywall strategies generating $50M+. Multi-step paywalls show 20-40% uplift.", "lang": "en"}, "knowledge": [{"text": "Paywalls are revenue engines. Multi-step paywalls show 20-40% uplift over single-screen.", "lang": "en"}, {"text": "Value-based pricing is most effective for SaaS.", "lang": "en"}, {"text": "Upfront pricing before free trial increases conversion.", "lang": "en"}, {"text": "Discount gamification boosts install-to-paid rates.", "lang": "en"}], "flashcards": [{"q": {"text": "What uplift do multi-step paywalls provide?", "lang": "en"}, "a": {"text": "20-40% uplift over single-screen paywalls.", "lang": "en"}}, {"q": {"text": "Should you show pricing before or after free trial?", "lang": "en"}, "a": {"text": "Before. Upfront pricing increases conversion by clarifying commitment from the start.", "lang": "en"}}], "sources": ["paywall_50m.md"], "connections": []}, {"id": "payment-gateways", "section": "marketing", "name": "بوابات الدفع SaaS", "emoji": "💳", "color": "#FF9800", "summary": {"text": "مقارنة 13 بوابة دفع للمؤسسين الأفراد في المنطقة العربية.", "lang": "ar"}, "knowledge": [{"text": "13 بوابة دفع: Stripe, Paddle, Lemon Squeezy (عالمية), PayMob, Fawry (محلية), USDC.", "lang": "ar"}, {"text": "Merchant of Record (MoR) يتولى الامتثال الضريبي العالمي.", "lang": "ar"}, {"text": "Stripe الأفضل للانطلاق العالمي، PayMob/Fawry ضروريان للسوق المصري.", "lang": "ar"}, {"text": "تنويع بوابات الدفع ضروري لتجنب تجميد الحسابات.", "lang": "ar"}], "flashcards": [{"q": {"text": "أفضل بوابات الدفع للسوق المصري؟", "lang": "ar"}, "a": {"text": "PayMob و Fawry محلياً، مع Stripe للانطلاق العالمي.", "lang": "ar"}}, {"q": {"text": "ما هو Merchant of Record؟", "lang": "ar"}, "a": {"text": "خدمة تتولى الامتثال الضريبي العالمي نيابة عنك.", "lang": "ar"}}], "sources": ["payment_gateways_saas.md"], "connections": ["cold-email"]}, {"id": "cold-email", "section": "marketing", "name": "Cold Email SaaS", "emoji": "📧", "color": "#E91E63", "summary": {"text": "Cold email scripts for SaaS: 7-step process, 10 templates, deliverability best practices.", "lang": "en"}, "knowledge": [{"text": "7-step process: data gathering, personalization, AIDA, segmentation, follow-up.", "lang": "en"}, {"text": "Requires SPF, DKIM, DMARC records and domain warming before campaigns.", "lang": "en"}, {"text": "3-7 touchpoints across email, LinkedIn, phone for max conversion.", "lang": "en"}, {"text": "AIDA and BANT frameworks structure effective sales messaging.", "lang": "en"}], "flashcards": [{"q": {"text": "Required DNS records for email deliverability?", "lang": "en"}, "a": {"text": "SPF, DKIM, and DMARC records. Plus domain warming before campaigns.", "lang": "en"}}, {"q": {"text": "What is the AIDA framework?", "lang": "en"}, "a": {"text": "Attention -> Interest -> Desire -> Action. A copywriting structure for sales.", "lang": "en"}}], "sources": ["cold_email_saas.txt"], "connections": ["payment-gateways"]}, {"id": "productivity", "section": "productivity", "name": "Productivity Systems", "emoji": "⚡", "color": "#9C27B0", "summary": {"text": "Dr. Justin Sung's 4-part system: Intention, Environment, Process, Review.", "lang": "en"}, "knowledge": [{"text": "4-part system: Intention (purpose), Environment (friction design), Process (workflows), Review (reflection).", "lang": "en"}, {"text": "Systems over willpower: design path of least resistance for productive behavior.", "lang": "en"}, {"text": "Reduce friction for good habits, increase it for bad ones through environment design.", "lang": "en"}, {"text": "Match energy patterns to tasks: creative work at peaks, admin at lows.", "lang": "en"}, {"text": "Habit stacking: attach new habits to existing ones for automatic execution.", "lang": "en"}], "flashcards": [{"q": {"text": "What are the 4 parts of Dr. Sung's system?", "lang": "en"}, "a": {"text": "Intention (purpose), Environment (friction), Process (workflows), Review (reflection).", "lang": "en"}}, {"q": {"text": "What does systems over willpower mean?", "lang": "en"}, "a": {"text": "Design your environment so the path of least resistance IS the productive behavior.", "lang": "en"}}], "sources": ["productivity_systems.md"], "connections": ["second-brain"]}, {"id": "surah-baqarah", "section": "quran", "name": "سورة البقرة — فضائل", "emoji": "📖", "color": "#4CAF50", "summary": {"text": "فضائل سورة البقرة من الأحاديث النبوية — بركة، حماية، وشرف لأهلها.", "lang": "ar"}, "knowledge": [{"text": "أطول سورة في القرآن. قال النبي ﷺ: 'أخذها بركة وتركها حسرة ولا تستطيعها البطلة'.", "lang": "ar"}, {"text": "هي وسورة آل عمران الزهراوان — تأتيان يوم القيامة كغمامتين تحاجان عن صاحبهما.", "lang": "ar"}, {"text": "البركات: بركة في الوقت، الرزق، الأهل، العمل؛ حماية من السحرة والشياطين.", "lang": "ar"}, {"text": "والدا حافظ القرآن يُكسَيان تاج الكرامة يوم القيامة.", "lang": "ar"}, {"text": "القرآن يشفع: 'اقرأ وارتق فإن منزلتك عند آخر آية تقرؤها'.", "lang": "ar"}, {"text": "أربع مراحل: تلاوة -> فهم -> حفظ -> تطبيق.", "lang": "ar"}], "flashcards": [{"q": {"text": "ما معنى 'أخذها بركة وتركها حسرة'؟", "lang": "ar"}, "a": {"text": "من يقرأ سورة البقرة ويلتزم بها يبارك له في وقته ورزقه وأهله، ومن يتركها يندم.", "lang": "ar"}}, {"q": {"text": "ما هي الزهراوان؟", "lang": "ar"}, "a": {"text": "سورة البقرة وسورة آل عمران — تأتيان يوم القيامة كغمامتين تحاجان عن صاحبهما.", "lang": "ar"}}, {"q": {"text": "ما هي مراحل تعلم القرآن؟", "lang": "ar"}, "a": {"text": "تلاوة -> فهم -> حفظ -> تطبيق.", "lang": "ar"}}, {"q": {"text": "ما الذي ينتظر والدي حافظ القرآن؟", "lang": "ar"}, "a": {"text": "يُكسَيان تاج الكرامة يوم القيامة.", "lang": "ar"}}], "sources": ["surat_albaqarah_fadl.txt", "surah_baqarah_change_life.txt"], "connections": ["learning-quran"]}, {"id": "learning-quran", "section": "quran", "name": "تعلم القرآن وأثره", "emoji": "🕋", "color": "#66BB6A", "summary": {"text": "كيف يغير تعلم سورة البقرة الحياة — التدرج والتطبيق.", "lang": "ar"}, "knowledge": [{"text": "الشيخ محمد الغليث: تعلم سورة البقرة بالتدريج — آية كل يوم مع التطبيق.", "lang": "ar"}, {"text": "التدرج في التعلم هو مفتاح الثبات — لا تحاول حفظ السورة دفعة واحدة.", "lang": "ar"}, {"text": "التطبيق العملي للآيات يحول المعرفة إلى إيمان راسخ.", "lang": "ar"}, {"text": "اليقين أعلى مرتبة من التصديق — يصل إلى القلب باقتناع كامل.", "lang": "ar"}, {"text": "أهل القرآن: يقال لهم 'اقرأ وارتق' — درجتك عند آخر آية.", "lang": "ar"}], "flashcards": [{"q": {"text": "ما هي طريقة الشيخ الغليث؟", "lang": "ar"}, "a": {"text": "التدرج: آية واحدة كل يوم مع التطبيق العملي.", "lang": "ar"}}, {"q": {"text": "الفرق بين اليقين والتصديق؟", "lang": "ar"}, "a": {"text": "اليقين أعلى — يستقر في القلب باقتناع كامل، التصديق مجرد قبول عقلي.", "lang": "ar"}}], "sources": ["surah_baqarah_change_life.txt"], "connections": ["surah-baqarah"]}];
+const SOURCES = {"7_hermes_uses.md": "https://drive.google.com/file/d/1JQq0t7iJQXwKlwM_9xYxdsepKRuGRRJO/view", "obsidian_hermes.md": "https://drive.google.com/file/d/1ZpxWtSKOYDwygHV9lI12B089Xm3Ofuuv/view", "hermes_config.txt": "https://drive.google.com/document/d/1M4u5tpNh05-8RpftztBd8v5RsNWK7XzapR0PMrZXqok/edit", "hermes_work_graph.md": "https://drive.google.com/file/d/1l499k9vSFEfXR9-qc-hdphWAP-VuUw4O/view", "odysseus_vs_hermes.md": "https://drive.google.com/file/d/16sFiMQsVaiiiu3BJ7nGK1oDeQuQlcRWy/view", "managing_ai_agents.md": "https://drive.google.com/file/d/1Zi93ODou57S32hRUoWq3m9P1QDEIhC64/view", "ai_content_studio.md": "https://drive.google.com/file/d/1k5VbclAIROpUiYzsV7V54sbfI_acpWV0/view", "coolify_vercel.md": "https://drive.google.com/file/d/1Mp6uGod7iMuaSGJbw34zuAX1JG73QiSi/view", "paywall_50m.md": "https://drive.google.com/file/d/1CO2Jee1D-YNE-9sGZkPxtcplXw31n4T2/view", "payment_gateways_saas.md": "https://drive.google.com/file/d/1ivgR_oWyHsoXDH0OjW6gg27qCHFA7UFi/view", "cold_email_saas.txt": "https://drive.google.com/file/d/1ed6zEFXkO2AB27FX9PgT8H1sZU_ztkUg/view", "productivity_systems.md": "https://drive.google.com/file/d/1G_4j5qZ5pI8AFLQajUJArOdqnQWdBJOR/view", "surat_albaqarah_fadl.txt": "https://drive.google.com/file/d/1l3WGTdKRrJF0DrY7ZeL1-GglnufOvtK2/view", "surah_baqarah_change_life.txt": "https://drive.google.com/file/d/1qE7AiAm90lA-7YFfbosEzqBTRQq34xfb/view", "بوابات_الدفع_SaaS_للمؤسسين_الأفراد.md": "https://drive.google.com/file/d/1ivgR_oWyHsoXDH0OjW6gg27qCHFA7UFi/view"};
+const GRAPHS = {"ai": {"nodes": [{"id": "hermes-agent", "name": "Hermes Agent", "emoji": "🤖", "color": "#2196F3"}, {"id": "second-brain", "name": "Second Brain", "emoji": "🧠", "color": "#9C27B0"}, {"id": "multi-agent", "name": "Multi-Agent Systems", "emoji": "👥", "color": "#00BCD4"}, {"id": "self-hosting", "name": "Self-Hosting & Coolify", "emoji": "🚀", "color": "#4CAF50"}, {"id": "obsidian", "name": "Obsidian", "emoji": "📚", "color": "#7C4DFF"}, {"id": "ai-content-studio", "name": "AI Content Studio", "emoji": "🎬", "color": "#E91E63"}, {"id": "automation", "name": "AI Automation", "emoji": "⚙️", "color": "#607D8B"}, {"id": "hermes-config", "name": "Hermes Configuration", "emoji": "🔧", "color": "#455A64"}, {"id": "knowledge-graph", "name": "Knowledge Graphs", "emoji": "🔍", "color": "#FF9800"}, {"id": "tailscale", "name": "Tailscale", "emoji": "🔗", "color": "#8BC34A"}, {"id": "odysseus-vs-hermes", "name": "مقارنة Odysseus vs Hermes", "emoji": "⚔️", "color": "#FF5722"}, {"id": "arabic-knowledge-org", "name": "تنظيم المعرفة بالخرائط", "emoji": "🗺️", "color": "#FF5722"}, {"id": "paywall-strategy", "name": "Paywall Strategy", "emoji": "💰", "color": "#FF5722"}], "edges": [{"source": "hermes-agent", "target": "second-brain"}, {"source": "hermes-agent", "target": "multi-agent"}, {"source": "hermes-agent", "target": "self-hosting"}, {"source": "hermes-agent", "target": "obsidian"}, {"source": "hermes-agent", "target": "knowledge-graph"}, {"source": "hermes-agent", "target": "hermes-config"}, {"source": "second-brain", "target": "hermes-agent"}, {"source": "second-brain", "target": "obsidian"}, {"source": "second-brain", "target": "knowledge-graph"}, {"source": "multi-agent", "target": "hermes-agent"}, {"source": "multi-agent", "target": "automation"}, {"source": "multi-agent", "target": "self-hosting"}, {"source": "multi-agent", "target": "ai-content-studio"}, {"source": "self-hosting", "target": "multi-agent"}, {"source": "self-hosting", "target": "tailscale"}, {"source": "self-hosting", "target": "ai-content-studio"}, {"source": "obsidian", "target": "hermes-agent"}, {"source": "obsidian", "target": "second-brain"}, {"source": "obsidian", "target": "knowledge-graph"}, {"source": "ai-content-studio", "target": "multi-agent"}, {"source": "ai-content-studio", "target": "self-hosting"}, {"source": "ai-content-studio", "target": "tailscale"}, {"source": "ai-content-studio", "target": "hermes-agent"}, {"source": "automation", "target": "multi-agent"}, {"source": "automation", "target": "hermes-agent"}, {"source": "hermes-config", "target": "hermes-agent"}, {"source": "knowledge-graph", "target": "second-brain"}, {"source": "knowledge-graph", "target": "obsidian"}, {"source": "knowledge-graph", "target": "hermes-agent"}, {"source": "tailscale", "target": "self-hosting"}, {"source": "tailscale", "target": "multi-agent"}, {"source": "tailscale", "target": "hermes-agent"}, {"source": "odysseus-vs-hermes", "target": "hermes-agent"}, {"source": "arabic-knowledge-org", "target": "knowledge-graph"}, {"source": "arabic-knowledge-org", "target": "second-brain"}, {"source": "arabic-knowledge-org", "target": "hermes-agent"}]}, "marketing": {"nodes": [{"id": "payment-gateways", "name": "بوابات الدفع SaaS", "emoji": "💳", "color": "#FF9800"}, {"id": "cold-email", "name": "Cold Email SaaS", "emoji": "📧", "color": "#E91E63"}], "edges": [{"source": "payment-gateways", "target": "cold-email"}, {"source": "cold-email", "target": "payment-gateways"}]}, "productivity": {"nodes": [{"id": "productivity", "name": "Productivity Systems", "emoji": "⚡", "color": "#9C27B0"}], "edges": []}, "quran": {"nodes": [{"id": "surah-baqarah", "name": "سورة البقرة — فضائل", "emoji": "📖", "color": "#4CAF50"}, {"id": "learning-quran", "name": "تعلم القرآن وأثره", "emoji": "🕋", "color": "#66BB6A"}], "edges": [{"source": "surah-baqarah", "target": "learning-quran"}, {"source": "learning-quran", "target": "surah-baqarah"}]}};
+
+class SRS {
+  static getKey(cid, idx) { return 'srs_'+cid+'_'+idx; }
+  static getCard(cid, idx) {
+    const raw = localStorage.getItem(this.getKey(cid, idx));
+    if (raw) return JSON.parse(raw);
+    return { conceptId: cid, cardIdx: idx, ease: 2.5, interval: 0, reps: 0, nextReview: 0 };
+  }
+  static saveCard(card) { localStorage.setItem(this.getKey(card.conceptId, card.cardIdx), JSON.stringify(card)); }
+  static review(card, quality) {
+    const q = quality;
+    if (q >= 2) {
+      card.reps += 1;
+      if (card.reps === 1) card.interval = 1;
+      else if (card.reps === 2) card.interval = 6;
+      else card.interval = Math.round(card.interval * card.ease);
+    } else {
+      card.reps = 0; card.interval = 0;
+    }
+    card.ease = Math.max(1.3, card.ease + (0.1 - (2 - q) * (0.08 + (2 - q) * 0.02)));
+    card.nextReview = Date.now() + card.interval * 86400000;
+    this.saveCard(card);
+    return card;
+  }
+  static getDueCards(cid, total) {
+    const now = Date.now();
+    const due = [];
+    for (let i = 0; i < total; i++) {
+      const card = this.getCard(cid, i);
+      if (card.nextReview <= now || card.reps === 0) due.push({...card, idx: i});
+    }
+    return due;
+  }
+  static getStats(cid, total) {
+    let mature = 0, learning = 0, newC = 0;
+    for (let i = 0; i < total; i++) {
+      const card = this.getCard(cid, i);
+      if (card.reps === 0) newC++;
+      else if (card.reps >= 3) mature++;
+      else learning++;
+    }
+    return { total, mature, learning, new: newC };
+  }
+  static reset(cid, total) {
+    for (let i = 0; i < total; i++) localStorage.removeItem(this.getKey(cid, i));
+  }
 }
 
-function open(c) {
+let activeSection = SECTIONS[0].id;
+let currentFilter = '';
+let currentConcept = null;
+let fcState = { cards: [], idx: 0, revealed: false };
+
+function render() { renderTabs(); renderGrid(); }
+
+function renderTabs() {
+  const el = document.getElementById('tabs');
+  el.innerHTML = SECTIONS.map(s =>
+    '<button class="tab'+(s.id===activeSection?' active':'')+'" style="--tab-color:'+s.color+'" onclick="switchSection(\''+s.id+'\')">'
+    +s.icon+' '+s.name_en+'<span class="badge">'+CONCEPTS.filter(c=>c.section===s.id).length+'</span></button>'
+  ).join('');
+}
+
+function renderGrid() {
+  const el = document.getElementById('g');
+  const q = currentFilter.toLowerCase();
+  const filtered = CONCEPTS.filter(c => {
+    if (activeSection !== 'all' && c.section !== activeSection) return false;
+    if (!q) return true;
+    return c.name.toLowerCase().includes(q) || c.summary.text.toLowerCase().includes(q) || c.knowledge.some(k => k.text.toLowerCase().includes(q));
+  });
+  if (!filtered.length) { el.innerHTML = '<div class="empty-state">&#x1F50D; No matching concepts found</div>'; return; }
+  el.innerHTML = filtered.map(c => {
+    const dir = c.name.match(/[\u0600-\u06FF]/) ? 'rtl' : 'ltr';
+    const langLabel = c.knowledge.some(k => k.lang === 'ar') ? 'AR' : 'EN';
+    return '<div class="card" style="--c:'+c.color+'" onclick="openConcept(\''+c.id+'\')">'
+      +'<div class="ch"><div class="ci" style="background:'+c.color+'1a">'+c.emoji+'</div><div class="cn" dir="'+dir+'">'+c.name+'</div></div>'
+      +'<div class="cs" dir="'+dir+'">'+c.summary.text+'</div>'
+      +'<div class="badges"><span class="b b-flash">&#x1F0CF; '+c.flashcards.length+' cards</span><span class="b b-lang">'+langLabel+'</span></div>'
+      +'</div>';
+  }).join('');
+}
+
+function switchSection(id) { activeSection = id; currentFilter = ''; document.getElementById('q').value = ''; render(); }
+
+function doSearch(v) { currentFilter = v; renderGrid(); }
+
+function openConcept(id) {
+  const c = CONCEPTS.find(x => x.id === id);
+  if (!c) return;
+  currentConcept = c;
   const p = document.getElementById('pn');
   p.style.setProperty('--c', c.color);
   const pi = document.getElementById('pIcon');
   pi.style.background = c.color + '1a';
   pi.innerHTML = c.emoji;
+  const dir = c.name.match(/[\u0600-\u06FF]/) ? 'rtl' : 'ltr';
   document.getElementById('pTitle').textContent = c.name;
-  document.getElementById('pSum').textContent = c.summary;
-  document.getElementById('pK').innerHTML = c.knowledge.map(k => '<li>'+k+'</li>').join('');
+  document.getElementById('pTitle').dir = dir;
+  document.getElementById('pSum').textContent = c.summary.text;
+  document.getElementById('pSum').dir = c.summary.lang === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('pSum').style.fontFamily = c.summary.lang === 'ar' ? "'Tajawal',sans-serif" : '';
+
+  document.getElementById('pK').innerHTML = c.knowledge.map(k =>
+    '<li dir="'+(k.lang==='ar'?'rtl':'ltr')+'"'+(k.lang==='ar'?" style=\"font-family:'Tajawal',sans-serif;\"":'')+'>'+k.text+'</li>'
+  ).join('');
+
   document.getElementById('pSrc').innerHTML = c.sources.map(s => {
-    const u = U[s];
+    const u = SOURCES[s];
     return u ? '<a href="'+u+'" target="_blank">&#8599; '+s+'</a>' : '<span>'+s+'</span>';
   }).join('');
-  document.getElementById('pConn').innerHTML = c.connections.length
-    ? c.connections.map(id => {
-        const f = C.find(cc => cc.id === id);
-        return f ? '<a onclick="event.stopPropagation();c();setTimeout(()=>openByName(\''+id+'\'),300)">'+f.emoji+' '+f.name+'</a>' : '';
-      }).join('')
-    : '<span style="color:#555;font-size:11px;">None</span>';
+
+  const conns = c.connections.map(iid => CONCEPTS.find(x => x.id === iid)).filter(x => x && x.section === c.section);
+  document.getElementById('pConn').innerHTML = conns.length
+    ? conns.map(f => '<a onclick="event.stopPropagation();closePanel();setTimeout(function(){openConcept(\''+f.id+'\')},300)">'+f.emoji+' '+f.name+'</a>').join('')
+    : '<span style="color:#555;font-size:11px;">No connections in this section</span>';
+
+  switchPanelTab(document.querySelector('.panel-tab'), 'info');
   document.getElementById('ov').classList.add('open');
   p.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
-function openByName(id) {
-  const c = C.find(cc => cc.id === id);
-  if (c) open(c);
-}
-
-function c() {
+function closePanel() {
   document.getElementById('ov').classList.remove('open');
   document.getElementById('pn').classList.remove('open');
   document.body.style.overflow = '';
 }
 
-function f(v) { render(v); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') c(); });
+function switchPanelTab(btn, tab) {
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel-tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
+  if (tab === 'flash' && currentConcept) initFlashcards();
+  if (tab === 'graph' && currentConcept) renderSectionGraph();
+}
+
+function initFlashcards() {
+  const c = currentConcept;
+  if (!c || !c.flashcards.length) return;
+  const due = SRS.getDueCards(c.id, c.flashcards.length);
+  const cards = due.length > 0 ? due : c.flashcards.map(function(_, i) { return {...SRS.getCard(c.id, i), idx: i}; });
+  fcState = { cards: cards, idx: 0, revealed: false };
+  const stats = SRS.getStats(c.id, c.flashcards.length);
+  document.getElementById('fcStats').textContent = '\uD83D\uDCCA '+stats.mature+' mature \u00B7 '+stats.learning+' learning \u00B7 '+stats.new+' new';
+  showFcCard();
+}
+
+function showFcCard() {
+  if (fcState.cards.length === 0) {
+    document.getElementById('fcEmoji').textContent = '\uD83C\uDF89';
+    document.getElementById('fcLabel').textContent = 'ALL DONE';
+    document.getElementById('fcText').textContent = 'All flashcards reviewed! Come back later.';
+    document.getElementById('fcHint').textContent = 'Great job! \uD83C\uDF89';
+    document.getElementById('fcCount').textContent = '\u2713';
+    document.getElementById('fcBtns').classList.remove('show');
+    return;
+  }
+  fcState.revealed = false;
+  const card = fcState.cards[fcState.idx];
+  const fc = currentConcept.flashcards[card.idx];
+  document.getElementById('fcEmoji').textContent = '\uD83C\uDCCF';
+  document.getElementById('fcLabel').textContent = 'QUESTION';
+  document.getElementById('fcText').innerHTML = '<span dir="'+(fc.q.lang==='ar'?'rtl':'ltr')+'"'+(fc.q.lang==='ar'?" style=\"font-family:'Tajawal',sans-serif;\"":'')+'>'+fc.q.text+'</span>';
+  document.getElementById('fcHint').textContent = '\uD83D\uDC46 Click to reveal answer';
+  document.getElementById('fcBtns').classList.remove('show');
+  document.getElementById('fcCount').textContent = (fcState.idx+1)+'/'+fcState.cards.length;
+  document.getElementById('fcProgress').innerHTML = fcState.cards.map(function(_, i) {
+    return '<div class="fc-dot'+(i<fcState.idx?' done':'')+(i===fcState.idx?' current':'')+'"></div>';
+  }).join('');
+}
+
+function fcReveal() {
+  if (!fcState.cards.length || fcState.revealed) return;
+  fcState.revealed = true;
+  const card = fcState.cards[fcState.idx];
+  const fc = currentConcept.flashcards[card.idx];
+  document.getElementById('fcEmoji').textContent = '\uD83D\uDCA1';
+  document.getElementById('fcLabel').textContent = 'ANSWER';
+  document.getElementById('fcText').innerHTML = '<span dir="'+(fc.a.lang==='ar'?'rtl':'ltr')+'"'+(fc.a.lang==='ar'?" style=\"font-family:'Tajawal',sans-serif;\"":'')+'>'+fc.a.text+'</span>';
+  document.getElementById('fcHint').textContent = 'How well did you know this?';
+  document.getElementById('fcBtns').classList.add('show');
+}
+
+function fcRate(quality) {
+  if (!fcState.revealed) return;
+  SRS.review(fcState.cards[fcState.idx], quality);
+  fcState.idx++;
+  if (fcState.idx >= fcState.cards.length) {
+    initFlashcards();
+  } else {
+    showFcCard();
+  }
+}
+
+function renderSectionGraph() {
+  const c = currentConcept;
+  if (!c) return;
+  const data = GRAPHS[c.section];
+  if (!data || !data.nodes || data.nodes.length < 2) {
+    document.querySelector('#pGraph').innerHTML = '<div class="graph-label">Not enough concepts for graph</div>';
+    return;
+  }
+  setTimeout(function() { runD3Graph(data, c.id); }, 50);
+}
+
+function runD3Graph(data, highlightId) {
+  const container = document.getElementById('pGraph');
+  if (!container) return;
+  container.innerHTML = '<div class="graph-label">Section Knowledge Graph</div>';
+
+  var width = container.clientWidth || 600;
+  var height = container.clientHeight || 300;
+
+  var svg = d3.select(container).append('svg').attr('width', width).attr('height', height);
+  var g = svg.append('g');
+
+  svg.call(d3.zoom().scaleExtent([0.3, 3]).on('zoom', function(event) {
+    g.attr('transform', event.transform);
+  }));
+
+  var nodes = data.nodes.map(function(n) { return Object.assign({}, n); });
+  var edges = data.edges.map(function(e) { return {source: e.source, target: e.target}; });
+
+  var sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edges).id(function(d) { return d.id; }).distance(80))
+    .force('charge', d3.forceManyBody().strength(-200))
+    .force('center', d3.forceCenter(width/2, height/2))
+    .force('collision', d3.forceCollide(30));
+
+  var link = g.append('g').selectAll('line').data(edges).join('line')
+    .attr('stroke', 'rgba(255,255,255,0.1)').attr('stroke-width', 1);
+
+  var node = g.append('g').selectAll('g').data(nodes).join('g')
+    .call(d3.drag()
+      .on('start', function(e, d) { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', function(e, d) { d.fx = e.x; d.fy = e.y; })
+      .on('end', function(e, d) { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+  node.append('circle')
+    .attr('r', function(d) { return d.id === highlightId ? 20 : 14; })
+    .attr('fill', function(d) { return d.color; })
+    .attr('stroke', function(d) { return d.id === highlightId ? '#FFD700' : 'rgba(255,255,255,0.2)'; })
+    .attr('stroke-width', function(d) { return d.id === highlightId ? 3 : 1.5; });
+
+  node.append('text')
+    .text(function(d) { return d.emoji; })
+    .attr('x', -7).attr('y', 5)
+    .attr('font-size', function(d) { return d.id === highlightId ? 18 : 13; });
+
+  var tooltip = document.getElementById('graphTooltip');
+  node.on('mouseover', function(event, d) {
+    tooltip.querySelector('.gt-name').textContent = d.name;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (event.pageX + 15) + 'px';
+    tooltip.style.top = (event.pageY - 5) + 'px';
+  }).on('mouseout', function() { tooltip.style.display = 'none'; })
+    .on('click', function(event, d) {
+      if (d.id !== highlightId) { closePanel(); setTimeout(function() { openConcept(d.id); }, 300); }
+    });
+
+  sim.on('tick', function() {
+    link.attr('x1', function(d) { return d.source.x; }).attr('y1', function(d) { return d.source.y; })
+        .attr('x2', function(d) { return d.target.x; }).attr('y2', function(d) { return d.target.y; });
+    node.attr('transform', function(d) { return 'translate('+d.x+','+d.y+')'; });
+  });
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePanel();
+  if (e.key === ' ' && document.getElementById('pn').classList.contains('open')) {
+    e.preventDefault();
+    if (!fcState.revealed) fcReveal();
+  }
+});
+
 render();
+window.addEventListener('resize', function() {
+  if (currentConcept) renderSectionGraph();
+});
 </script>
 </body>
 </html>
