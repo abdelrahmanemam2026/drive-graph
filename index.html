@@ -3,165 +3,385 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Knowledge Graph</title>
+<title>Knowledge Graph — Interactive Learning</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0f0f1a; color: #eee; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
-  #graph { width: 100vw; height: 100vh; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0a0a14; color:#e0e0e0; font-family:'Inter',sans-serif; overflow:hidden; height:100vh; }
+  #app { display:flex; height:100vh; }
+  #graph { flex:1; height:100vh; position:relative; }
+  #graph svg { width:100%; height:100%; }
   .top-bar {
-    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
-    background: rgba(15,15,26,0.9); backdrop-filter: blur(12px);
-    padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
-    display: flex; gap: 10px; align-items: center; z-index: 100;
-    font-size: 12px; flex-wrap: wrap; justify-content: center;
+    position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:100;
+    background:rgba(10,10,20,0.92); backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,0.06); border-radius:14px;
+    padding:10px 20px; display:flex; gap:12px; align-items:center;
+    font-size:13px; box-shadow:0 4px 30px rgba(0,0,0,0.5);
   }
-  .top-bar span { color: #666; }
-  .top-bar strong { color: #FFD700; }
+  .top-bar .logo { font-weight:700; color:#FFD700; font-size:14px; }
+  .top-bar .sep { color:#333; }
+  .top-bar .stats { color:#666; font-size:11px; }
   .top-bar input {
-    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
-    color: #eee; padding: 5px 10px; border-radius: 5px; outline: none; width: 160px; font-size: 12px;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+    color:#eee; padding:6px 12px; border-radius:8px; outline:none;
+    width:180px; font-size:12px; transition:border .2s;
   }
-  .top-bar input:focus { border-color: #FFD700; }
+  .top-bar input:focus { border-color:#FFD700; }
+  .top-bar input::placeholder { color:#555; }
   .top-bar button {
-    background: #FFD700; color: #000; border: none; padding: 5px 12px;
-    border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;
+    background:rgba(255,255,255,0.06); color:#ccc; border:1px solid rgba(255,255,255,0.1);
+    padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; transition:all .2s;
   }
-  .top-bar button:hover { background: #FFC107; }
+  .top-bar button:hover { background:rgba(255,255,255,0.12); color:#fff; }
+  .filters {
+    position:fixed; left:50%; top:72px; transform:translateX(-50%); z-index:99;
+    display:flex; gap:6px; flex-wrap:wrap; justify-content:center;
+  }
+  .filters button {
+    padding:4px 12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);
+    background:transparent; color:#888; font-size:11px; cursor:pointer;
+    transition:all .2s; font-family:inherit;
+  }
+  .filters button:hover { background:rgba(255,255,255,0.05); color:#ccc; }
+  .filters button.active { background:rgba(255,255,255,0.1); color:#fff; border-color:rgba(255,255,255,0.2); font-weight:600; }
+  .filters button .dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px; vertical-align:middle; }
+  #sidebar {
+    position:fixed; right:-420px; top:0; width:380px; height:100vh;
+    background:rgba(16,16,30,0.97); backdrop-filter:blur(20px);
+    border-left:1px solid rgba(255,255,255,0.06);
+    z-index:200; transition:right .35s cubic-bezier(0.4,0,0.2,1);
+    padding:28px 24px; overflow-y:auto; box-shadow:-10px 0 40px rgba(0,0,0,0.4);
+  }
+  #sidebar.open { right:0; }
+  #sidebar .close-btn {
+    position:absolute; top:16px; right:16px; width:32px; height:32px;
+    border-radius:50%; border:none; background:rgba(255,255,255,0.06);
+    color:#888; cursor:pointer; font-size:18px; display:flex;
+    align-items:center; justify-content:center; transition:all .2s;
+  }
+  #sidebar .close-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
+  #sidebar .sb-type { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#666; margin-bottom:6px; }
+  #sidebar .sb-title { font-size:18px; font-weight:600; color:#fff; margin-bottom:8px; line-height:1.3; }
+  #sidebar .sb-category { font-size:12px; color:#888; margin-bottom:16px; }
+  #sidebar .sb-summary { font-size:14px; line-height:1.6; color:#bbb; margin-bottom:20px; padding:14px 16px; background:rgba(255,255,255,0.03); border-radius:10px; border-left:3px solid #FFD700; }
+  #sidebar .sb-section { font-size:12px; font-weight:600; color:#999; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; margin-top:16px; }
+  #sidebar .sb-topics { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+  #sidebar .sb-topic {
+    padding:4px 12px; background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.15);
+    border-radius:20px; font-size:12px; color:#FFD700; cursor:pointer; transition:all .2s;
+  }
+  #sidebar .sb-topic:hover { background:rgba(255,215,0,0.15); }
+  #sidebar .sb-drive {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 16px; background:rgba(255,255,255,0.06); border-radius:8px;
+    color:#ccc; text-decoration:none; font-size:13px; margin-top:4px; transition:all .2s;
+  }
+  #sidebar .sb-drive:hover { background:rgba(255,255,255,0.1); color:#fff; }
+  #sidebar .sb-related-item {
+    padding:8px 12px; background:rgba(255,255,255,0.03); border-radius:8px;
+    margin-bottom:4px; font-size:12px; color:#999; cursor:pointer; transition:all .2s;
+  }
+  #sidebar .sb-related-item:hover { background:rgba(255,255,255,0.06); color:#ccc; }
   .legend {
-    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-    background: rgba(15,15,26,0.85); backdrop-filter: blur(8px);
-    padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
-    font-size: 11px; color: #666; z-index: 100;
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+    background:rgba(10,10,20,0.85); backdrop-filter:blur(8px);
+    padding:6px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);
+    font-size:11px; color:#555; z-index:50;
   }
-  .legend span { display: inline-flex; align-items: center; gap: 4px; margin: 0 8px; }
-  .legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .tooltip {
-    position: fixed; display: none; background: rgba(0,0,0,0.92);
-    backdrop-filter: blur(10px); padding: 10px 14px; border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.12); font-size: 12px;
-    max-width: 320px; word-wrap: break-word; z-index: 200;
-    pointer-events: none; line-height: 1.4;
+  .legend span { display:inline-flex; align-items:center; gap:4px; margin:0 6px; }
+  .legend .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  #sidebar::-webkit-scrollbar { width:4px; }
+  #sidebar::-webkit-scrollbar-track { background:transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+  @media (max-width:768px) {
+    #sidebar { width:100vw; right:-100vw; }
+    .top-bar { flex-wrap:wrap; padding:8px 12px; width:95%; font-size:11px; top:10px; }
+    .top-bar input { width:120px; }
+    .filters { top:62px; }
   }
-  .tooltip .tt-name { font-weight: 600; color: #fff; }
-  .tooltip .tt-meta { color: #999; font-size: 10px; margin-top: 2px; }
-  .tooltip .tt-files { color: #FFD700; font-size: 10px; }
 </style>
 </head>
 <body>
-<div id="graph"></div>
+<div id="app"><div id="graph"></div></div>
+
 <div class="top-bar">
-  <strong>🧠 Knowledge Graph</strong>
-  <span>|</span>
-  <span id="stats">14 files · 94 topics · 0 connections</span>
-  <input id="search" type="text" placeholder="Search topic or file..." oninput="filterGraph(this.value)">
-  <button onclick="resetZoom()">↻ Reset</button>
+  <span class="logo">&#129504; Knowledge Graph</span>
+  <span class="sep">|</span>
+  <span class="stats" id="stats">14 files &middot; 75 concepts &middot; 11 bridges</span>
+  <input id="search" type="text" placeholder="Search files or topics..." oninput="filterGraph(this.value)">
+  <button onclick="resetView()">&#8635; Reset</button>
 </div>
-<div class="tooltip" id="tooltip"></div>
+
+<div class="filters" id="filters">
+  <button class="active" onclick="filterCategory('all')" data-cat="all">&#9776; All</button>
+  <button onclick="filterCategory('ai')" data-cat="ai"><span class="dot" style="background:#2196F3"></span>AI</button>
+  <button onclick="filterCategory('productivity')" data-cat="productivity"><span class="dot" style="background:#9C27B0"></span>Productivity</button>
+  <button onclick="filterCategory('marketing')" data-cat="marketing"><span class="dot" style="background:#FF9800"></span>Marketing</button>
+  <button onclick="filterCategory('Quran')" data-cat="Quran"><span class="dot" style="background:#4CAF50"></span>Quran</button>
+  <button onclick="filterCategory('shared')" data-cat="shared"><span class="dot" style="background:#FFD700"></span>Bridging Topics</button>
+</div>
+
+<div id="sidebar">
+  <button class="close-btn" onclick="closeSidebar()">&#10005;</button>
+  <div class="sb-type" id="sb-type"></div>
+  <div class="sb-title" id="sb-title"></div>
+  <div class="sb-category" id="sb-category"></div>
+  <div id="sb-summary" class="sb-summary"></div>
+  <div id="sb-topics-section" style="display:none;">
+    <div class="sb-section">&#128204; Key Topics</div>
+    <div class="sb-topics" id="sb-topics"></div>
+  </div>
+  <div id="sb-files-section" style="display:none;">
+    <div class="sb-section">&#128196; Related Files</div>
+    <div id="sb-files"></div>
+  </div>
+  <div id="sb-related-section" style="display:none;">
+    <div class="sb-section">&#128279; Connected Files</div>
+    <div id="sb-related"></div>
+  </div>
+  <div id="sb-drive-section" style="display:none;">
+    <a id="sb-drive" class="sb-drive" target="_blank">&#8599; Open in Google Drive</a>
+  </div>
+</div>
+
 <div class="legend">
   <span><span class="dot" style="background:#2196F3"></span> AI</span>
   <span><span class="dot" style="background:#9C27B0"></span> Productivity</span>
   <span><span class="dot" style="background:#FF9800"></span> Marketing</span>
   <span><span class="dot" style="background:#4CAF50"></span> Quran</span>
-  <span><span class="dot" style="background:#FFEB3B"></span> Shared Topic</span>
-  <span><span class="dot" style="background:#B0BEC5"></span> Single Topic</span>
-  <span>| ⚡ Click ↻ to reset</span>
+  <span><span class="dot" style="background:#FFD700"></span> Bridging Topic</span>
+  <span>| &#128073; Click any node &middot; Hover to highlight</span>
 </div>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
-const data = {"nodes": [{"id": "productivity_systems", "label": "productivity_systems.md", "fullName": "productivity_systems.md", "type": "file", "category": "productivity", "color": "#9C27B0", "r": 12, "url": ""}, {"id": "7_hermes_uses", "label": "7_hermes_uses.md", "fullName": "7_hermes_uses.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 12, "url": ""}, {"id": "obsidian_hermes", "label": "obsidian_hermes.md", "fullName": "obsidian_hermes.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 12, "url": ""}, {"id": "coolify_vercel", "label": "coolify_vercel.md", "fullName": "coolify_vercel.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 12, "url": ""}, {"id": "paywall_50m", "label": "paywall_50m.md", "fullName": "paywall_50m.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 12, "url": ""}, {"id": "hermes_work_graph", "label": "hermes_work_graph.md", "fullName": "hermes_work_graph.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 12, "url": ""}, {"id": "odysseus_vs_hermes", "label": "odysseus_vs_hermes.md", "fullName": "odysseus_vs_hermes.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 12, "url": ""}, {"id": "ai_content_studio", "label": "ai_content_studio.md", "fullName": "ai_content_studio.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 12, "url": ""}, {"id": "managing_ai_agents", "label": "managing_ai_agents.md", "fullName": "managing_ai_agents.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 12, "url": ""}, {"id": "hermes_config", "label": "hermes_config.txt", "fullName": "hermes_config.txt", "type": "file", "category": "ai", "color": "#2196F3", "r": 12, "url": ""}, {"id": "payment_gateways_saas", "label": "payment_gateways_saas.md", "fullName": "payment_gateways_saas.md", "type": "file", "category": "marketing", "color": "#FF9800", "r": 12, "url": ""}, {"id": "cold_email_saas", "label": "cold_email_saas.txt", "fullName": "cold_email_saas.txt", "type": "file", "category": "marketing", "color": "#FF9800", "r": 12, "url": ""}, {"id": "surat_albaqarah_fadl", "label": "surat_albaqarah_fadl.txt", "fullName": "surat_albaqarah_fadl.txt", "type": "file", "category": "Quran", "color": "#4CAF50", "r": 12, "url": ""}, {"id": "surah_baqarah_change_life", "label": "surah_baqarah_change_life.txt", "fullName": "surah_baqarah_change_life.txt", "type": "file", "category": "Quran", "color": "#4CAF50", "r": 12, "url": ""}, {"id": "4-part_productivity_system_intention_environment_process", "label": "4-part productivity system (Intention, Enviro..", "fullName": "4-part productivity system (Intention, Environment, Process, Review)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["productivity_systems"]}, {"id": "systems_over_willpower_and_motivation", "label": "Systems over willpower and motivation", "fullName": "Systems over willpower and motivation", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["productivity_systems"]}, {"id": "environment_design_for_friction_reduction", "label": "Environment design for friction reduction", "fullName": "Environment design for friction reduction", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["productivity_systems"]}, {"id": "process_engineering_matching_energy_patterns", "label": "Process engineering matching energy patterns", "fullName": "Process engineering matching energy patterns", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["productivity_systems"]}, {"id": "review_and_adaptation_cycle", "label": "Review and adaptation cycle", "fullName": "Review and adaptation cycle", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["productivity_systems"]}, {"id": "cognitive_load_reduction_and_habit_stacking", "label": "Cognitive load reduction and habit stacking", "fullName": "Cognitive load reduction and habit stacking", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["productivity_systems"]}, {"id": "self-regulated_learning_dr._justin_sung", "label": "Self-regulated learning (Dr. Justin Sung)", "fullName": "Self-regulated learning (Dr. Justin Sung)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["productivity_systems"]}, {"id": "competitor_research_via_recurring_cron_jobs", "label": "Competitor research via recurring cron jobs", "fullName": "Competitor research via recurring cron jobs", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["7_hermes_uses"]}, {"id": "ai_kanban_critique_and_the_resolver_system", "label": "AI Kanban critique and the Resolver system", "fullName": "AI Kanban critique and the Resolver system", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["7_hermes_uses"]}, {"id": "personal_wiki_obsidian_as_long-term_memory", "label": "Personal wiki/Obsidian as long-term memory", "fullName": "Personal wiki/Obsidian as long-term memory", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["7_hermes_uses"]}, {"id": "task_management_bridging_linear_notion_slack", "label": "Task management bridging Linear, Notion, Slac..", "fullName": "Task management bridging Linear, Notion, Slack", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["7_hermes_uses"]}, {"id": "video_creation_with_hyperframes", "label": "Video creation with Hyperframes", "fullName": "Video creation with Hyperframes", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["7_hermes_uses"]}, {"id": "remote_gateways_and_tailscale_cross-device_control", "label": "Remote gateways and Tailscale cross-device co..", "fullName": "Remote gateways and Tailscale cross-device control", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["7_hermes_uses"]}, {"id": "skillification_of_repeatable_workflows", "label": "Skillification of repeatable workflows", "fullName": "Skillification of repeatable workflows", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["7_hermes_uses"]}, {"id": "obsidian_+_hermes_agent_integration", "label": "Obsidian + Hermes Agent integration", "fullName": "Obsidian + Hermes Agent integration", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["obsidian_hermes"]}, {"id": "persistent_long-term_memory_for_ai_agents", "label": "Persistent long-term memory for AI agents", "fullName": "Persistent long-term memory for AI agents", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["obsidian_hermes"]}, {"id": "read_write_search_link_notes_automatically", "label": "Read/write/search/link notes automatically", "fullName": "Read/write/search/link notes automatically", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["obsidian_hermes"]}, {"id": "knowledge_flywheel_compounding_knowledge_effect", "label": "Knowledge flywheel (compounding knowledge eff..", "fullName": "Knowledge flywheel (compounding knowledge effect)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["obsidian_hermes"]}, {"id": "second_brain_+_ai_executor_combination", "label": "Second Brain + AI executor combination", "fullName": "Second Brain + AI executor combination", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["obsidian_hermes"]}, {"id": "local-first_markdown-based_knowledge_management", "label": "Local-first Markdown-based knowledge manageme..", "fullName": "Local-first Markdown-based knowledge management", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["obsidian_hermes"]}, {"id": "coolify_as_open-source_self-hosted_vercel_alternative", "label": "Coolify as open-source self-hosted Vercel alt..", "fullName": "Coolify as open-source self-hosted Vercel alternative", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["coolify_vercel"]}, {"id": "docker-based_deployment_on_$5_month_vps", "label": "Docker-based deployment on $5/month VPS", "fullName": "Docker-based deployment on $5/month VPS", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["coolify_vercel"]}, {"id": "automatic_ci_cd_from_git_push", "label": "Automatic CI/CD from Git push", "fullName": "Automatic CI/CD from Git push", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["coolify_vercel"]}, {"id": "one-click_postgresql_database_provisioning", "label": "One-click PostgreSQL database provisioning", "fullName": "One-click PostgreSQL database provisioning", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["coolify_vercel"]}, {"id": "free_ssl_via_let's_encrypt", "label": "Free SSL via Let's Encrypt", "fullName": "Free SSL via Let's Encrypt", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["coolify_vercel"]}, {"id": "one-click_rollback_and_deployment_history", "label": "One-click rollback and deployment history", "fullName": "One-click rollback and deployment history", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["coolify_vercel"]}, {"id": "self-hosting_vs_managed_platforms_cost_comparison", "label": "Self-hosting vs managed platforms cost compar..", "fullName": "Self-hosting vs managed platforms cost comparison", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["coolify_vercel"]}, {"id": "paywall_as_revenue_engine_not_ui_element", "label": "Paywall as revenue engine (not UI element)", "fullName": "Paywall as revenue engine (not UI element)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["paywall_50m"]}, {"id": "multi-step_vs_single-screen_paywalls_20-40%_uplift", "label": "Multi-step vs single-screen paywalls (20-40% ..", "fullName": "Multi-step vs single-screen paywalls (20-40% uplift)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["paywall_50m"]}, {"id": "free_trial_psychology_and_upfront_pricing_strategies", "label": "Free trial psychology and upfront pricing str..", "fullName": "Free trial psychology and upfront pricing strategies", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["paywall_50m"]}, {"id": "discount_gamification_spin-the-wheel_social_proof", "label": "Discount gamification (spin-the-wheel, social..", "fullName": "Discount gamification (spin-the-wheel, social proof)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["paywall_50m"]}, {"id": "install-to-paid_conversion_optimization", "label": "Install-to-paid conversion optimization", "fullName": "Install-to-paid conversion optimization", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["paywall_50m"]}, {"id": "pricing_frameworks_cost-plus_competitor_value-based", "label": "Pricing frameworks (cost-plus, competitor, va..", "fullName": "Pricing frameworks (cost-plus, competitor, value-based)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["paywall_50m"]}, {"id": "trial_toggles_for_different_user_intents", "label": "Trial toggles for different user intents", "fullName": "Trial toggles for different user intents", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["paywall_50m"]}, {"id": "hermes_work_desktop_application", "label": "Hermes Work desktop application", "fullName": "Hermes Work desktop application", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_work_graph"]}, {"id": "graph_engineer_skill_for_knowledge_graph_creation", "label": "Graph Engineer skill for knowledge graph crea..", "fullName": "Graph Engineer skill for knowledge graph creation", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_work_graph"]}, {"id": "knowledge_graph_visualization_nodes_and_edges", "label": "Knowledge Graph visualization (nodes and edge..", "fullName": "Knowledge Graph visualization (nodes and edges)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_work_graph"]}, {"id": "organizing_scattered_notes_into_connected_knowledge", "label": "Organizing scattered notes into connected kno..", "fullName": "Organizing scattered notes into connected knowledge", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_work_graph"]}, {"id": "second_brain___digital_knowledge_management", "label": "Second Brain / digital knowledge management", "fullName": "Second Brain / digital knowledge management", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_work_graph"]}, {"id": "odysseus_vs_hermes_agent_comparison", "label": "Odysseus vs Hermes Agent comparison", "fullName": "Odysseus vs Hermes Agent comparison", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "setup_simplicity_odysseus_vs_advanced_customization_herme", "label": "Setup simplicity (Odysseus) vs advanced custo..", "fullName": "Setup simplicity (Odysseus) vs advanced customization (Hermes)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "multi-agent_orchestration_capabilities", "label": "Multi-agent orchestration capabilities", "fullName": "Multi-agent orchestration capabilities", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "skills_system_plugins_cron_jobs_memory", "label": "Skills System, Plugins, Cron Jobs, Memory", "fullName": "Skills System, Plugins, Cron Jobs, Memory", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "use_case_suitability_simple_tasks_vs_complex_projects", "label": "Use case suitability (simple tasks vs complex..", "fullName": "Use case suitability (simple tasks vs complex projects)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "cost_and_self-hosting_considerations", "label": "Cost and self-hosting considerations", "fullName": "Cost and self-hosting considerations", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "5-agent_autonomous_content_studio_atlas_vera_kite_orin_", "label": "5-agent autonomous content studio (Atlas, Ver..", "fullName": "5-agent autonomous content studio (Atlas, Vera, Kite, Orin, Orchestrator)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["ai_content_studio"]}, {"id": "single_responsibility_per_agent_pattern", "label": "Single responsibility per agent pattern", "fullName": "Single responsibility per agent pattern", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["ai_content_studio"]}, {"id": "telegram_as_primary_user_interface", "label": "Telegram as primary user interface", "fullName": "Telegram as primary user interface", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["ai_content_studio"]}, {"id": "tailscale_for_secure_dashboard_access", "label": "Tailscale for secure dashboard access", "fullName": "Tailscale for secure dashboard access", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["ai_content_studio"]}, {"id": "external_api_integration_perplexity_imgbb_buffer", "label": "External API integration (Perplexity, ImgBB, ..", "fullName": "External API integration (Perplexity, ImgBB, Buffer)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["ai_content_studio"]}, {"id": "structured_json_handoffs_between_agents", "label": "Structured JSON handoffs between agents", "fullName": "Structured JSON handoffs between agents", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["ai_content_studio"]}, {"id": "self-hosted_multi-agent_pipeline_on_$5_month_vps", "label": "Self-hosted multi-agent pipeline on $5/month ..", "fullName": "Self-hosted multi-agent pipeline on $5/month VPS", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["ai_content_studio"]}, {"id": "managing_ai_agents_as_the_most_valuable_skill_of_2026", "label": "Managing AI agents as the most valuable skill..", "fullName": "Managing AI agents as the most valuable skill of 2026", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["managing_ai_agents"]}, {"id": "cloud_vm_over_local_for_50x_parallel_output", "label": "Cloud VM over local for 50x parallel output", "fullName": "Cloud VM over local for 50x parallel output", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["managing_ai_agents"]}, {"id": "model_routing_for_token_cost_optimization_$20k_\u2192_$5k_mo", "label": "Model routing for token cost optimization ($2..", "fullName": "Model routing for token cost optimization ($20K \u2192 $5K/mo)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["managing_ai_agents"]}, {"id": "self-improvement_loop_agent_grace_shipping_~3_fixes_day", "label": "Self-improvement loop agent (Grace) shipping ..", "fullName": "Self-improvement loop agent (Grace) shipping ~3 fixes/day", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["managing_ai_agents"]}, {"id": "three_must-build_automations_signup_test_watchdog_self-im", "label": "Three must-build automations (signup test, wa..", "fullName": "Three must-build automations (signup test, watchdog, self-improvement)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["managing_ai_agents"]}, {"id": "phone_as_command_center_50%_of_management_from_phone", "label": "Phone as command center (50% of management fr..", "fullName": "Phone as command center (50% of management from phone)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["managing_ai_agents"]}, {"id": "building_in_public_on_x_for_compound_credibility", "label": "Building in public on X for compound credibil..", "fullName": "Building in public on X for compound credibility", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["managing_ai_agents"]}, {"id": "context_and_output_limits_max_bytes_file_reading_compress", "label": "Context and output limits (max_bytes, file re..", "fullName": "Context and output limits (max_bytes, file reading, compression threshold)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_config"]}, {"id": "sub-agent_configuration_concurrent_children_spawn_depth_a", "label": "Sub-agent configuration (concurrent children,..", "fullName": "Sub-agent configuration (concurrent children, spawn depth, auto approve)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_config"]}, {"id": "cost_optimization_with_auxiliary_models_and_effort_levels", "label": "Cost optimization with auxiliary models and e..", "fullName": "Cost optimization with auxiliary models and effort levels", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_config"]}, {"id": "quick_commands_aliases_and_checkpointing", "label": "Quick commands, aliases, and checkpointing", "fullName": "Quick commands, aliases, and checkpointing", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_config"]}, {"id": "yolo_mode_ephemeral_system_prompts_and_debugging_modes", "label": "YOLO mode, ephemeral system prompts, and debu..", "fullName": "YOLO mode, ephemeral system prompts, and debugging modes", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_config"]}, {"id": "personalities_and_background_notifications", "label": "Personalities and background notifications", "fullName": "Personalities and background notifications", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_config"]}, {"id": "tuning_compression_threshold_to_75%_and_target_ratio", "label": "Tuning compression threshold to 75% and targe..", "fullName": "Tuning compression threshold to 75% and target ratio", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["hermes_config"]}, {"id": "13_payment_gateway_comparison_for_individual_saas_founders", "label": "13 payment gateway comparison for individual ..", "fullName": "13 payment gateway comparison for individual SaaS founders", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["payment_gateways_saas"]}, {"id": "stripe_paddle_lemon_squeezy_as_top_global_choices", "label": "Stripe, Paddle, Lemon Squeezy as top global c..", "fullName": "Stripe, Paddle, Lemon Squeezy as top global choices", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["payment_gateways_saas"]}, {"id": "merchant_of_record_mor_for_tax_handling", "label": "Merchant of Record (MoR) for tax handling", "fullName": "Merchant of Record (MoR) for tax handling", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["payment_gateways_saas"]}, {"id": "local_mena_gateways_paymob_fawry_paytabs", "label": "Local MENA gateways (PayMob, Fawry, PayTabs)", "fullName": "Local MENA gateways (PayMob, Fawry, PayTabs)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["payment_gateways_saas"]}, {"id": "crypto_payment_alternatives_usdc_coinbase_commerce_helio", "label": "Crypto payment alternatives (USDC, Coinbase C..", "fullName": "Crypto payment alternatives (USDC, Coinbase Commerce, Helio)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["payment_gateways_saas"]}, {"id": "wise_and_payoneer_for_multi-currency_banking", "label": "Wise and Payoneer for multi-currency banking", "fullName": "Wise and Payoneer for multi-currency banking", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["payment_gateways_saas"]}, {"id": "risk_management_for_account_freezes_and_verification", "label": "Risk management for account freezes and verif..", "fullName": "Risk management for account freezes and verification", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["payment_gateways_saas"]}, {"id": "saas-specific_cold_email_strategies", "label": "SaaS-specific cold email strategies", "fullName": "SaaS-specific cold email strategies", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["cold_email_saas"]}, {"id": "7_proven_steps_data_gathering_personalization_aida_segme", "label": "7 proven steps (data gathering, personalizati..", "fullName": "7 proven steps (data gathering, personalization, AIDA, segmentation, follow-up)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["cold_email_saas"]}, {"id": "10_cold_email_templates_initial_outreach_follow-up_social", "label": "10 cold email templates (initial outreach, fo..", "fullName": "10 cold email templates (initial outreach, follow-up, social proof, breakup)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["cold_email_saas"]}, {"id": "email_deliverability_best_practices_spf_dkim_dmarc_domai", "label": "Email deliverability best practices (SPF, DKI..", "fullName": "Email deliverability best practices (SPF, DKIM, DMARC, domain warming)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["cold_email_saas"]}, {"id": "aida_bant_and_charm_frameworks", "label": "AIDA, BANT, and CHARM frameworks", "fullName": "AIDA, BANT, and CHARM frameworks", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["cold_email_saas"]}, {"id": "follow-up_cadence_3-7_touchpoints_across_email_linkedin_p", "label": "Follow-up cadence (3-7 touchpoints across ema..", "fullName": "Follow-up cadence (3-7 touchpoints across email, LinkedIn, phone)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["cold_email_saas"]}, {"id": "subject_line_best_practices_and_personalization_rules", "label": "Subject line best practices and personalizati..", "fullName": "Subject line best practices and personalization rules", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["cold_email_saas"]}, {"id": "virtues_of_surah_al-baqarah_based_on_hadith_of_buraidah", "label": "Virtues of Surah Al-Baqarah based on hadith o..", "fullName": "Virtues of Surah Al-Baqarah based on hadith of Buraidah", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "blessings_barakah_in_time_provision_family_and_work", "label": "Blessings (barakah) in time, provision, famil..", "fullName": "Blessings (barakah) in time, provision, family, and work", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "regret_hasrah_of_abandoning_surah_al-baqarah", "label": "Regret (hasrah) of abandoning Surah Al-Baqara..", "fullName": "Regret (hasrah) of abandoning Surah Al-Baqarah", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "protection_from_sorcerers_al-batala", "label": "Protection from sorcerers (al-batala)", "fullName": "Protection from sorcerers (al-batala)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "al-zahrawan_the_two_luminous_surahs:_al-baqarah_+_al-imran", "label": "Al-Zahrawan (the two luminous surahs: Al-Baqa..", "fullName": "Al-Zahrawan (the two luminous surahs: Al-Baqarah + Al-Imran)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "quran_interceding_for_its_companion_on_judgment_day", "label": "Quran interceding for its companion on Judgme..", "fullName": "Quran interceding for its companion on Judgment Day", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "four_learning_stages:_recitation_understanding_memorizatio", "label": "Four learning stages: recitation, understandi..", "fullName": "Four learning stages: recitation, understanding, memorization, application", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "surah_al-baqarah_can_change_your_life_and_home", "label": "Surah Al-Baqarah can change your life and hom..", "fullName": "Surah Al-Baqarah can change your life and home", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "certainty_yaqeen_vs._mere_belief_tasdeeq_in_afterlife_re", "label": "Certainty (yaqeen) vs. mere belief (tasdeeq) ..", "fullName": "Certainty (yaqeen) vs. mere belief (tasdeeq) in afterlife realities", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "parents_honored_through_child's_quran_memorization", "label": "Parents honored through child's Quran memoriz..", "fullName": "Parents honored through child's Quran memorization", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "ascending_in_paradise_degrees_through_recitation", "label": "Ascending in Paradise degrees through recitat..", "fullName": "Ascending in Paradise degrees through recitation", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "having_a_mushaf_at_home_and_keeping_it_read_not_decorative", "label": "Having a Mushaf at home and keeping it read (..", "fullName": "Having a Mushaf at home and keeping it read (not decorative)", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "practical_gradual_learning_approach", "label": "Practical gradual learning approach", "fullName": "Practical gradual learning approach", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "quran_as_a_companion_welcoming_the_believer_from_the_grave", "label": "Quran as a companion welcoming the believer f..", "fullName": "Quran as a companion welcoming the believer from the grave", "type": "topic", "category": "topic", "color": "#B0BEC5", "r": 10, "url": "", "count": 1, "files": ["surah_baqarah_change_life"]}], "links": [{"source": "productivity_systems", "target": "4-part_productivity_system_intention_environment_process", "type": "contains"}, {"source": "productivity_systems", "target": "systems_over_willpower_and_motivation", "type": "contains"}, {"source": "productivity_systems", "target": "environment_design_for_friction_reduction", "type": "contains"}, {"source": "productivity_systems", "target": "process_engineering_matching_energy_patterns", "type": "contains"}, {"source": "productivity_systems", "target": "review_and_adaptation_cycle", "type": "contains"}, {"source": "productivity_systems", "target": "cognitive_load_reduction_and_habit_stacking", "type": "contains"}, {"source": "productivity_systems", "target": "self-regulated_learning_dr._justin_sung", "type": "contains"}, {"source": "7_hermes_uses", "target": "competitor_research_via_recurring_cron_jobs", "type": "contains"}, {"source": "7_hermes_uses", "target": "ai_kanban_critique_and_the_resolver_system", "type": "contains"}, {"source": "7_hermes_uses", "target": "personal_wiki_obsidian_as_long-term_memory", "type": "contains"}, {"source": "7_hermes_uses", "target": "task_management_bridging_linear_notion_slack", "type": "contains"}, {"source": "7_hermes_uses", "target": "video_creation_with_hyperframes", "type": "contains"}, {"source": "7_hermes_uses", "target": "remote_gateways_and_tailscale_cross-device_control", "type": "contains"}, {"source": "7_hermes_uses", "target": "skillification_of_repeatable_workflows", "type": "contains"}, {"source": "obsidian_hermes", "target": "obsidian_+_hermes_agent_integration", "type": "contains"}, {"source": "obsidian_hermes", "target": "persistent_long-term_memory_for_ai_agents", "type": "contains"}, {"source": "obsidian_hermes", "target": "read_write_search_link_notes_automatically", "type": "contains"}, {"source": "obsidian_hermes", "target": "knowledge_flywheel_compounding_knowledge_effect", "type": "contains"}, {"source": "obsidian_hermes", "target": "second_brain_+_ai_executor_combination", "type": "contains"}, {"source": "obsidian_hermes", "target": "local-first_markdown-based_knowledge_management", "type": "contains"}, {"source": "coolify_vercel", "target": "coolify_as_open-source_self-hosted_vercel_alternative", "type": "contains"}, {"source": "coolify_vercel", "target": "docker-based_deployment_on_$5_month_vps", "type": "contains"}, {"source": "coolify_vercel", "target": "automatic_ci_cd_from_git_push", "type": "contains"}, {"source": "coolify_vercel", "target": "one-click_postgresql_database_provisioning", "type": "contains"}, {"source": "coolify_vercel", "target": "free_ssl_via_let's_encrypt", "type": "contains"}, {"source": "coolify_vercel", "target": "one-click_rollback_and_deployment_history", "type": "contains"}, {"source": "coolify_vercel", "target": "self-hosting_vs_managed_platforms_cost_comparison", "type": "contains"}, {"source": "paywall_50m", "target": "paywall_as_revenue_engine_not_ui_element", "type": "contains"}, {"source": "paywall_50m", "target": "multi-step_vs_single-screen_paywalls_20-40%_uplift", "type": "contains"}, {"source": "paywall_50m", "target": "free_trial_psychology_and_upfront_pricing_strategies", "type": "contains"}, {"source": "paywall_50m", "target": "discount_gamification_spin-the-wheel_social_proof", "type": "contains"}, {"source": "paywall_50m", "target": "install-to-paid_conversion_optimization", "type": "contains"}, {"source": "paywall_50m", "target": "pricing_frameworks_cost-plus_competitor_value-based", "type": "contains"}, {"source": "paywall_50m", "target": "trial_toggles_for_different_user_intents", "type": "contains"}, {"source": "hermes_work_graph", "target": "hermes_work_desktop_application", "type": "contains"}, {"source": "hermes_work_graph", "target": "graph_engineer_skill_for_knowledge_graph_creation", "type": "contains"}, {"source": "hermes_work_graph", "target": "knowledge_graph_visualization_nodes_and_edges", "type": "contains"}, {"source": "hermes_work_graph", "target": "organizing_scattered_notes_into_connected_knowledge", "type": "contains"}, {"source": "hermes_work_graph", "target": "second_brain___digital_knowledge_management", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "odysseus_vs_hermes_agent_comparison", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "setup_simplicity_odysseus_vs_advanced_customization_herme", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "multi-agent_orchestration_capabilities", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "skills_system_plugins_cron_jobs_memory", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "use_case_suitability_simple_tasks_vs_complex_projects", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "cost_and_self-hosting_considerations", "type": "contains"}, {"source": "ai_content_studio", "target": "5-agent_autonomous_content_studio_atlas_vera_kite_orin_", "type": "contains"}, {"source": "ai_content_studio", "target": "single_responsibility_per_agent_pattern", "type": "contains"}, {"source": "ai_content_studio", "target": "telegram_as_primary_user_interface", "type": "contains"}, {"source": "ai_content_studio", "target": "tailscale_for_secure_dashboard_access", "type": "contains"}, {"source": "ai_content_studio", "target": "external_api_integration_perplexity_imgbb_buffer", "type": "contains"}, {"source": "ai_content_studio", "target": "structured_json_handoffs_between_agents", "type": "contains"}, {"source": "ai_content_studio", "target": "self-hosted_multi-agent_pipeline_on_$5_month_vps", "type": "contains"}, {"source": "managing_ai_agents", "target": "managing_ai_agents_as_the_most_valuable_skill_of_2026", "type": "contains"}, {"source": "managing_ai_agents", "target": "cloud_vm_over_local_for_50x_parallel_output", "type": "contains"}, {"source": "managing_ai_agents", "target": "model_routing_for_token_cost_optimization_$20k_\u2192_$5k_mo", "type": "contains"}, {"source": "managing_ai_agents", "target": "self-improvement_loop_agent_grace_shipping_~3_fixes_day", "type": "contains"}, {"source": "managing_ai_agents", "target": "three_must-build_automations_signup_test_watchdog_self-im", "type": "contains"}, {"source": "managing_ai_agents", "target": "phone_as_command_center_50%_of_management_from_phone", "type": "contains"}, {"source": "managing_ai_agents", "target": "building_in_public_on_x_for_compound_credibility", "type": "contains"}, {"source": "hermes_config", "target": "context_and_output_limits_max_bytes_file_reading_compress", "type": "contains"}, {"source": "hermes_config", "target": "sub-agent_configuration_concurrent_children_spawn_depth_a", "type": "contains"}, {"source": "hermes_config", "target": "cost_optimization_with_auxiliary_models_and_effort_levels", "type": "contains"}, {"source": "hermes_config", "target": "quick_commands_aliases_and_checkpointing", "type": "contains"}, {"source": "hermes_config", "target": "yolo_mode_ephemeral_system_prompts_and_debugging_modes", "type": "contains"}, {"source": "hermes_config", "target": "personalities_and_background_notifications", "type": "contains"}, {"source": "hermes_config", "target": "tuning_compression_threshold_to_75%_and_target_ratio", "type": "contains"}, {"source": "payment_gateways_saas", "target": "13_payment_gateway_comparison_for_individual_saas_founders", "type": "contains"}, {"source": "payment_gateways_saas", "target": "stripe_paddle_lemon_squeezy_as_top_global_choices", "type": "contains"}, {"source": "payment_gateways_saas", "target": "merchant_of_record_mor_for_tax_handling", "type": "contains"}, {"source": "payment_gateways_saas", "target": "local_mena_gateways_paymob_fawry_paytabs", "type": "contains"}, {"source": "payment_gateways_saas", "target": "crypto_payment_alternatives_usdc_coinbase_commerce_helio", "type": "contains"}, {"source": "payment_gateways_saas", "target": "wise_and_payoneer_for_multi-currency_banking", "type": "contains"}, {"source": "payment_gateways_saas", "target": "risk_management_for_account_freezes_and_verification", "type": "contains"}, {"source": "cold_email_saas", "target": "saas-specific_cold_email_strategies", "type": "contains"}, {"source": "cold_email_saas", "target": "7_proven_steps_data_gathering_personalization_aida_segme", "type": "contains"}, {"source": "cold_email_saas", "target": "10_cold_email_templates_initial_outreach_follow-up_social", "type": "contains"}, {"source": "cold_email_saas", "target": "email_deliverability_best_practices_spf_dkim_dmarc_domai", "type": "contains"}, {"source": "cold_email_saas", "target": "aida_bant_and_charm_frameworks", "type": "contains"}, {"source": "cold_email_saas", "target": "follow-up_cadence_3-7_touchpoints_across_email_linkedin_p", "type": "contains"}, {"source": "cold_email_saas", "target": "subject_line_best_practices_and_personalization_rules", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "virtues_of_surah_al-baqarah_based_on_hadith_of_buraidah", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "blessings_barakah_in_time_provision_family_and_work", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "regret_hasrah_of_abandoning_surah_al-baqarah", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "protection_from_sorcerers_al-batala", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "al-zahrawan_the_two_luminous_surahs:_al-baqarah_+_al-imran", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "quran_interceding_for_its_companion_on_judgment_day", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "four_learning_stages:_recitation_understanding_memorizatio", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "surah_al-baqarah_can_change_your_life_and_home", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "certainty_yaqeen_vs._mere_belief_tasdeeq_in_afterlife_re", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "parents_honored_through_child's_quran_memorization", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "ascending_in_paradise_degrees_through_recitation", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "having_a_mushaf_at_home_and_keeping_it_read_not_decorative", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "practical_gradual_learning_approach", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "quran_as_a_companion_welcoming_the_believer_from_the_grave", "type": "contains"}]};
-
+const data = {"nodes": [{"id": "productivity_systems", "label": "productivity_systems.md", "fullName": "productivity_systems.md", "type": "file", "category": "productivity", "color": "#9C27B0", "r": 14, "emoji": "\u26a1", "summary": "Dr. Justin Sung's 4-part productivity system (intention, environment, process, review) makes productive behavior the default path of least resistance instead of relying on willpower.", "driveUrl": "https://drive.google.com/file/d/1G_4j5qZ5pI8AFLQajUJArOdqnQWdBJOR/view", "topics": ["Productivity Systems", "Systems over willpower", "Environment design", "Process engineering", "Cognitive load reduction", "Self-regulated learning"]}, {"id": "7_hermes_uses", "label": "7_hermes_uses.md", "fullName": "7_hermes_uses.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83e\udd16", "summary": "Seven real-world Hermes Agent use cases including competitor research, personal wikis, video creation, daily briefings, remote computer control, and turning workflows into reusable skills.", "driveUrl": "https://drive.google.com/file/d/1JQq0t7iJQXwKlwM_9xYxdsepKRuGRRJO/view", "topics": ["Hermes Agent", "Cron Jobs", "AI Kanban", "Obsidian Integration", "Second Brain", "Task Management", "Tailscale", "Video Creation", "Skillification"]}, {"id": "obsidian_hermes", "label": "obsidian_hermes.md", "fullName": "obsidian_hermes.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83e\udde0", "summary": "Connecting Hermes Agent to Obsidian creates a persistent long-term memory system where AI agents read, write, and link notes in your knowledge vault.", "driveUrl": "https://drive.google.com/file/d/1ZpxWtSKOYDwygHV9lI12B089Xm3Ofuuv/view", "topics": ["Obsidian Integration", "Second Brain", "Long-term Memory", "Hermes Agent", "Knowledge Management", "Markdown"]}, {"id": "coolify_vercel", "label": "coolify_vercel.md", "fullName": "coolify_vercel.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83d\ude80", "summary": "Step-by-step tutorial for self-hosting Coolify (open-source Vercel alternative) on a $5 VPS to deploy Next.js apps with automatic CI/CD, databases, and SSL.", "driveUrl": "https://drive.google.com/file/d/1Mp6uGod7iMuaSGJbw34zuAX1JG73QiSi/view", "topics": ["Self-hosting", "Coolify", "Docker", "CI/CD", "PostgreSQL", "SSL", "VPS"]}, {"id": "paywall_50m", "label": "paywall_50m.md", "fullName": "paywall_50m.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83d\udcb0", "summary": "Deep dive into paywall strategies and pricing psychology that generated over $50M in revenue, treating the paywall as a revenue engine rather than a UI element.", "driveUrl": "https://drive.google.com/file/d/1CO2Jee1D-YNE-9sGZkPxtcplXw31n4T2/view", "topics": ["Paywall", "Monetization", "Pricing", "Conversion Optimization", "Gamification", "Free Trial"]}, {"id": "hermes_work_graph", "label": "hermes_work_graph.md", "fullName": "hermes_work_graph.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83d\udd17", "summary": "Arabic: Hermes Work + Graph Engineer for turning scattered notes into organized Knowledge Graph (Second Brain).", "driveUrl": "https://drive.google.com/file/d/1l499k9vSFEfXR9-qc-hdphWAP-VuUw4O/view", "topics": ["Knowledge Graph", "Hermes Work", "Graph Engineer", "Second Brain", "Knowledge Organization"]}, {"id": "odysseus_vs_hermes", "label": "odysseus_vs_hermes.md", "fullName": "odysseus_vs_hermes.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\u2694\ufe0f", "summary": "Arabic: Comprehensive comparison between Odysseus and Hermes Agent to help users choose based on technical expertise and project needs.", "driveUrl": "https://drive.google.com/file/d/16sFiMQsVaiiiu3BJ7nGK1oDeQuQlcRWy/view", "topics": ["Hermes Agent", "Odysseus", "Multi-agent", "Self-hosting", "Skills System", "Orchestration"]}, {"id": "ai_content_studio", "label": "ai_content_studio.md", "fullName": "ai_content_studio.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83c\udfac", "summary": "Building a fully autonomous content studio with 5 specialized Hermes agents on a $5 VPS controlled via Telegram.", "driveUrl": "https://drive.google.com/file/d/1k5VbclAIROpUiYzsV7V54sbfI_acpWV0/view", "topics": ["Multi-agent", "Autonomous Studio", "Telegram", "Tailscale", "API Integration", "JSON", "VPS"]}, {"id": "managing_ai_agents", "label": "managing_ai_agents.md", "fullName": "managing_ai_agents.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83c\udfc6", "summary": "Managing AI agents is the most valuable skill of 2026, featuring Ryan Carson's system for shipping 22-40 PRs daily as a team of one.", "driveUrl": "https://drive.google.com/file/d/1Zi93ODou57S32hRUoWq3m9P1QDEIhC64/view", "topics": ["Multi-agent", "AI Agents 2026", "Cloud VM", "Model Routing", "Cost Optimization", "Self-improvement", "Automation"]}, {"id": "hermes_config", "label": "hermes_config.txt", "fullName": "hermes_config.txt", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\u2699\ufe0f", "summary": "How to optimize Hermes Agent by configuring context management, file limits, memory, sub-agents, cost optimization, and compression.", "driveUrl": "https://drive.google.com/document/d/1M4u5tpNh05-8RpftztBd8v5RsNWK7XzapR0PMrZXqok/edit", "topics": ["Hermes Agent", "Configuration", "Context Management", "Sub-agents", "Cost Optimization", "YOLO Mode"]}, {"id": "payment_gateways_saas", "label": "payment_gateways_saas.md", "fullName": "payment_gateways_saas.md", "type": "file", "category": "marketing", "color": "#FF9800", "r": 14, "emoji": "\ud83d\udcb3", "summary": "Arabic: Comparison of 13 payment gateways for individual founders in MENA including Stripe, Paddle, PayMob for global and local SaaS payments.", "driveUrl": "https://drive.google.com/file/d/1ivgR_oWyHsoXDH0OjW6gg27qCHFA7UFi/view", "topics": ["Payment Gateways", "SaaS", "Stripe", "Merchant of Record", "MENA Payments", "Crypto", "Risk Management"]}, {"id": "cold_email_saas", "label": "cold_email_saas.txt", "fullName": "cold_email_saas.txt", "type": "file", "category": "marketing", "color": "#FF9800", "r": 14, "emoji": "\ud83d\udce7", "summary": "Cold email scripts for SaaS: 7 steps, AIDA/BANT frameworks, 10 templates, deliverability best practices with domain warming.", "driveUrl": "https://drive.google.com/file/d/1ed6zEFXkO2AB27FX9PgT8H1sZU_ztkUg/view", "topics": ["Cold Email", "SaaS", "AIDA", "Email Deliverability", "Lead Generation", "Sales Funnel"]}, {"id": "surat_albaqarah_fadl", "label": "surat_albaqarah_fadl.txt", "fullName": "surat_albaqarah_fadl.txt", "type": "file", "category": "Quran", "color": "#4CAF50", "r": 14, "emoji": "\ud83d\udcd6", "summary": "Arabic: Virtues of Surah Al-Baqarah based on hadith - blessings, protection, and honor for its companion on Judgment Day.", "driveUrl": "https://drive.google.com/file/d/1l3WGTdKRrJF0DrY7ZeL1-GglnufOvtK2/view", "topics": ["Surah Al-Baqarah", "Quran", "Blessings", "Intercession", "Learning Stages", "Tazkiyah"]}, {"id": "surah_baqarah_change_life", "label": "surah_baqarah_change_life.txt", "fullName": "surah_baqarah_change_life.txt", "type": "file", "category": "Quran", "color": "#4CAF50", "r": 14, "emoji": "\ud83d\udd4c", "summary": "Arabic/English: Sheikh Mohamed El-Ghalith lecture on learning Surah Al-Baqarah gradually and what awaits its people in Paradise.", "driveUrl": "https://drive.google.com/file/d/1qE7AiAm90lA-7YFfbosEzqBTRQq34xfb/view", "topics": ["Surah Al-Baqarah", "Quran", "Yaqeen", "Paradise", "Parents", "Gradual Learning"]}, {"id": "productivity_systems", "label": "Productivity Systems", "fullName": "Productivity Systems", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "systems_over_willpower", "label": "Systems over willpower", "fullName": "Systems over willpower", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "environment_design", "label": "Environment design", "fullName": "Environment design", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "process_engineering", "label": "Process engineering", "fullName": "Process engineering", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "cognitive_load_reduction", "label": "Cognitive load reduction", "fullName": "Cognitive load reduction", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "self_regulated_learning", "label": "Self-regulated learning", "fullName": "Self-regulated learning", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "hermes_agent", "label": "Hermes Agent", "fullName": "Hermes Agent", "type": "topic", "shared": true, "color": "#FFD700", "r": 18, "count": 4, "files": ["7_hermes_uses", "obsidian_hermes", "odysseus_vs_hermes", "hermes_config"]}, {"id": "cron_jobs", "label": "Cron Jobs", "fullName": "Cron Jobs", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["7_hermes_uses"]}, {"id": "ai_kanban", "label": "AI Kanban", "fullName": "AI Kanban", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["7_hermes_uses"]}, {"id": "obsidian_integration", "label": "Obsidian Integration", "fullName": "Obsidian Integration", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["7_hermes_uses", "obsidian_hermes"]}, {"id": "second_brain", "label": "Second Brain", "fullName": "Second Brain", "type": "topic", "shared": true, "color": "#FFD700", "r": 15, "count": 3, "files": ["7_hermes_uses", "obsidian_hermes", "hermes_work_graph"]}, {"id": "task_management", "label": "Task Management", "fullName": "Task Management", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["7_hermes_uses"]}, {"id": "tailscale", "label": "Tailscale", "fullName": "Tailscale", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["7_hermes_uses", "ai_content_studio"]}, {"id": "video_creation", "label": "Video Creation", "fullName": "Video Creation", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["7_hermes_uses"]}, {"id": "skillification", "label": "Skillification", "fullName": "Skillification", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["7_hermes_uses"]}, {"id": "long_term_memory", "label": "Long-term Memory", "fullName": "Long-term Memory", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["obsidian_hermes"]}, {"id": "knowledge_management", "label": "Knowledge Management", "fullName": "Knowledge Management", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["obsidian_hermes"]}, {"id": "markdown", "label": "Markdown", "fullName": "Markdown", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["obsidian_hermes"]}, {"id": "self_hosting", "label": "Self-hosting", "fullName": "Self-hosting", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["coolify_vercel", "odysseus_vs_hermes"]}, {"id": "coolify", "label": "Coolify", "fullName": "Coolify", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["coolify_vercel"]}, {"id": "docker", "label": "Docker", "fullName": "Docker", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["coolify_vercel"]}, {"id": "ci_cd", "label": "CI/CD", "fullName": "CI/CD", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["coolify_vercel"]}, {"id": "postgresql", "label": "PostgreSQL", "fullName": "PostgreSQL", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["coolify_vercel"]}, {"id": "ssl", "label": "SSL", "fullName": "SSL", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["coolify_vercel"]}, {"id": "vps", "label": "VPS", "fullName": "VPS", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["coolify_vercel", "ai_content_studio"]}, {"id": "paywall", "label": "Paywall", "fullName": "Paywall", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "monetization", "label": "Monetization", "fullName": "Monetization", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "pricing", "label": "Pricing", "fullName": "Pricing", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "conversion_optimization", "label": "Conversion Optimization", "fullName": "Conversion Optimization", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "gamification", "label": "Gamification", "fullName": "Gamification", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "free_trial", "label": "Free Trial", "fullName": "Free Trial", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "knowledge_graph", "label": "Knowledge Graph", "fullName": "Knowledge Graph", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_work_graph"]}, {"id": "hermes_work", "label": "Hermes Work", "fullName": "Hermes Work", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_work_graph"]}, {"id": "graph_engineer", "label": "Graph Engineer", "fullName": "Graph Engineer", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_work_graph"]}, {"id": "knowledge_organization", "label": "Knowledge Organization", "fullName": "Knowledge Organization", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_work_graph"]}, {"id": "odysseus", "label": "Odysseus", "fullName": "Odysseus", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "multi_agent", "label": "Multi-agent", "fullName": "Multi-agent", "type": "topic", "shared": true, "color": "#FFD700", "r": 15, "count": 3, "files": ["odysseus_vs_hermes", "ai_content_studio", "managing_ai_agents"]}, {"id": "skills_system", "label": "Skills System", "fullName": "Skills System", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "orchestration", "label": "Orchestration", "fullName": "Orchestration", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "autonomous_studio", "label": "Autonomous Studio", "fullName": "Autonomous Studio", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["ai_content_studio"]}, {"id": "telegram", "label": "Telegram", "fullName": "Telegram", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["ai_content_studio"]}, {"id": "api_integration", "label": "API Integration", "fullName": "API Integration", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["ai_content_studio"]}, {"id": "json", "label": "JSON", "fullName": "JSON", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["ai_content_studio"]}, {"id": "ai_agents_2026", "label": "AI Agents 2026", "fullName": "AI Agents 2026", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["managing_ai_agents"]}, {"id": "cloud_vm", "label": "Cloud VM", "fullName": "Cloud VM", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["managing_ai_agents"]}, {"id": "model_routing", "label": "Model Routing", "fullName": "Model Routing", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["managing_ai_agents"]}, {"id": "cost_optimization", "label": "Cost Optimization", "fullName": "Cost Optimization", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["managing_ai_agents", "hermes_config"]}, {"id": "self_improvement", "label": "Self-improvement", "fullName": "Self-improvement", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["managing_ai_agents"]}, {"id": "automation", "label": "Automation", "fullName": "Automation", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["managing_ai_agents"]}, {"id": "configuration", "label": "Configuration", "fullName": "Configuration", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_config"]}, {"id": "context_management", "label": "Context Management", "fullName": "Context Management", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_config"]}, {"id": "sub_agents", "label": "Sub-agents", "fullName": "Sub-agents", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_config"]}, {"id": "yolo_mode", "label": "YOLO Mode", "fullName": "YOLO Mode", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_config"]}, {"id": "payment_gateways", "label": "Payment Gateways", "fullName": "Payment Gateways", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "saas", "label": "SaaS", "fullName": "SaaS", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["payment_gateways_saas", "cold_email_saas"]}, {"id": "stripe", "label": "Stripe", "fullName": "Stripe", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "merchant_of_record", "label": "Merchant of Record", "fullName": "Merchant of Record", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "mena_payments", "label": "MENA Payments", "fullName": "MENA Payments", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "crypto", "label": "Crypto", "fullName": "Crypto", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "risk_management", "label": "Risk Management", "fullName": "Risk Management", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "cold_email", "label": "Cold Email", "fullName": "Cold Email", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["cold_email_saas"]}, {"id": "aida", "label": "AIDA", "fullName": "AIDA", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["cold_email_saas"]}, {"id": "email_deliverability", "label": "Email Deliverability", "fullName": "Email Deliverability", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["cold_email_saas"]}, {"id": "lead_generation", "label": "Lead Generation", "fullName": "Lead Generation", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["cold_email_saas"]}, {"id": "sales_funnel", "label": "Sales Funnel", "fullName": "Sales Funnel", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["cold_email_saas"]}, {"id": "surah_al_baqarah", "label": "Surah Al-Baqarah", "fullName": "Surah Al-Baqarah", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["surat_albaqarah_fadl", "surah_baqarah_change_life"]}, {"id": "quran", "label": "Quran", "fullName": "Quran", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["surat_albaqarah_fadl", "surah_baqarah_change_life"]}, {"id": "blessings", "label": "Blessings", "fullName": "Blessings", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "intercession", "label": "Intercession", "fullName": "Intercession", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "learning_stages", "label": "Learning Stages", "fullName": "Learning Stages", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "tazkiyah", "label": "Tazkiyah", "fullName": "Tazkiyah", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "yaqeen", "label": "Yaqeen", "fullName": "Yaqeen", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "paradise", "label": "Paradise", "fullName": "Paradise", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "parents", "label": "Parents", "fullName": "Parents", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "gradual_learning", "label": "Gradual Learning", "fullName": "Gradual Learning", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surah_baqarah_change_life"]}], "links": [{"source": "productivity_systems", "target": "productivity_systems", "type": "contains"}, {"source": "productivity_systems", "target": "systems_over_willpower", "type": "contains"}, {"source": "productivity_systems", "target": "environment_design", "type": "contains"}, {"source": "productivity_systems", "target": "process_engineering", "type": "contains"}, {"source": "productivity_systems", "target": "cognitive_load_reduction", "type": "contains"}, {"source": "productivity_systems", "target": "self_regulated_learning", "type": "contains"}, {"source": "7_hermes_uses", "target": "hermes_agent", "type": "contains"}, {"source": "7_hermes_uses", "target": "cron_jobs", "type": "contains"}, {"source": "7_hermes_uses", "target": "ai_kanban", "type": "contains"}, {"source": "7_hermes_uses", "target": "obsidian_integration", "type": "contains"}, {"source": "7_hermes_uses", "target": "second_brain", "type": "contains"}, {"source": "7_hermes_uses", "target": "task_management", "type": "contains"}, {"source": "7_hermes_uses", "target": "tailscale", "type": "contains"}, {"source": "7_hermes_uses", "target": "video_creation", "type": "contains"}, {"source": "7_hermes_uses", "target": "skillification", "type": "contains"}, {"source": "obsidian_hermes", "target": "obsidian_integration", "type": "contains"}, {"source": "obsidian_hermes", "target": "second_brain", "type": "contains"}, {"source": "obsidian_hermes", "target": "long_term_memory", "type": "contains"}, {"source": "obsidian_hermes", "target": "hermes_agent", "type": "contains"}, {"source": "obsidian_hermes", "target": "knowledge_management", "type": "contains"}, {"source": "obsidian_hermes", "target": "markdown", "type": "contains"}, {"source": "coolify_vercel", "target": "self_hosting", "type": "contains"}, {"source": "coolify_vercel", "target": "coolify", "type": "contains"}, {"source": "coolify_vercel", "target": "docker", "type": "contains"}, {"source": "coolify_vercel", "target": "ci_cd", "type": "contains"}, {"source": "coolify_vercel", "target": "postgresql", "type": "contains"}, {"source": "coolify_vercel", "target": "ssl", "type": "contains"}, {"source": "coolify_vercel", "target": "vps", "type": "contains"}, {"source": "paywall_50m", "target": "paywall", "type": "contains"}, {"source": "paywall_50m", "target": "monetization", "type": "contains"}, {"source": "paywall_50m", "target": "pricing", "type": "contains"}, {"source": "paywall_50m", "target": "conversion_optimization", "type": "contains"}, {"source": "paywall_50m", "target": "gamification", "type": "contains"}, {"source": "paywall_50m", "target": "free_trial", "type": "contains"}, {"source": "hermes_work_graph", "target": "knowledge_graph", "type": "contains"}, {"source": "hermes_work_graph", "target": "hermes_work", "type": "contains"}, {"source": "hermes_work_graph", "target": "graph_engineer", "type": "contains"}, {"source": "hermes_work_graph", "target": "second_brain", "type": "contains"}, {"source": "hermes_work_graph", "target": "knowledge_organization", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "hermes_agent", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "odysseus", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "multi_agent", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "self_hosting", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "skills_system", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "orchestration", "type": "contains"}, {"source": "ai_content_studio", "target": "multi_agent", "type": "contains"}, {"source": "ai_content_studio", "target": "autonomous_studio", "type": "contains"}, {"source": "ai_content_studio", "target": "telegram", "type": "contains"}, {"source": "ai_content_studio", "target": "tailscale", "type": "contains"}, {"source": "ai_content_studio", "target": "api_integration", "type": "contains"}, {"source": "ai_content_studio", "target": "json", "type": "contains"}, {"source": "ai_content_studio", "target": "vps", "type": "contains"}, {"source": "managing_ai_agents", "target": "multi_agent", "type": "contains"}, {"source": "managing_ai_agents", "target": "ai_agents_2026", "type": "contains"}, {"source": "managing_ai_agents", "target": "cloud_vm", "type": "contains"}, {"source": "managing_ai_agents", "target": "model_routing", "type": "contains"}, {"source": "managing_ai_agents", "target": "cost_optimization", "type": "contains"}, {"source": "managing_ai_agents", "target": "self_improvement", "type": "contains"}, {"source": "managing_ai_agents", "target": "automation", "type": "contains"}, {"source": "hermes_config", "target": "hermes_agent", "type": "contains"}, {"source": "hermes_config", "target": "configuration", "type": "contains"}, {"source": "hermes_config", "target": "context_management", "type": "contains"}, {"source": "hermes_config", "target": "sub_agents", "type": "contains"}, {"source": "hermes_config", "target": "cost_optimization", "type": "contains"}, {"source": "hermes_config", "target": "yolo_mode", "type": "contains"}, {"source": "payment_gateways_saas", "target": "payment_gateways", "type": "contains"}, {"source": "payment_gateways_saas", "target": "saas", "type": "contains"}, {"source": "payment_gateways_saas", "target": "stripe", "type": "contains"}, {"source": "payment_gateways_saas", "target": "merchant_of_record", "type": "contains"}, {"source": "payment_gateways_saas", "target": "mena_payments", "type": "contains"}, {"source": "payment_gateways_saas", "target": "crypto", "type": "contains"}, {"source": "payment_gateways_saas", "target": "risk_management", "type": "contains"}, {"source": "cold_email_saas", "target": "cold_email", "type": "contains"}, {"source": "cold_email_saas", "target": "saas", "type": "contains"}, {"source": "cold_email_saas", "target": "aida", "type": "contains"}, {"source": "cold_email_saas", "target": "email_deliverability", "type": "contains"}, {"source": "cold_email_saas", "target": "lead_generation", "type": "contains"}, {"source": "cold_email_saas", "target": "sales_funnel", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "surah_al_baqarah", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "quran", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "blessings", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "intercession", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "learning_stages", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "tazkiyah", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "surah_al_baqarah", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "quran", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "yaqeen", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "paradise", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "parents", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "gradual_learning", "type": "contains"}, {"source": "7_hermes_uses", "target": "obsidian_hermes", "type": "shared", "topic": "Hermes Agent"}, {"source": "7_hermes_uses", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Hermes Agent"}, {"source": "7_hermes_uses", "target": "hermes_config", "type": "shared", "topic": "Hermes Agent"}, {"source": "obsidian_hermes", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Hermes Agent"}, {"source": "hermes_config", "target": "obsidian_hermes", "type": "shared", "topic": "Hermes Agent"}, {"source": "hermes_config", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Hermes Agent"}, {"source": "7_hermes_uses", "target": "hermes_work_graph", "type": "shared", "topic": "Second Brain"}, {"source": "hermes_work_graph", "target": "obsidian_hermes", "type": "shared", "topic": "Second Brain"}, {"source": "7_hermes_uses", "target": "ai_content_studio", "type": "shared", "topic": "Tailscale"}, {"source": "coolify_vercel", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Self-hosting"}, {"source": "ai_content_studio", "target": "coolify_vercel", "type": "shared", "topic": "VPS"}, {"source": "ai_content_studio", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Multi-agent"}, {"source": "managing_ai_agents", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Multi-agent"}, {"source": "ai_content_studio", "target": "managing_ai_agents", "type": "shared", "topic": "Multi-agent"}, {"source": "hermes_config", "target": "managing_ai_agents", "type": "shared", "topic": "Cost Optimization"}, {"source": "cold_email_saas", "target": "payment_gateways_saas", "type": "shared", "topic": "SaaS"}, {"source": "surah_baqarah_change_life", "target": "surat_albaqarah_fadl", "type": "shared", "topic": "Surah Al-Baqarah"}]};
 const w = window.innerWidth, h = window.innerHeight;
+
 const svg = d3.select("#graph").append("svg").attr("width", w).attr("height", h);
 const g = svg.append("g");
-
-const zoom = d3.zoom().scaleExtent([0.08, 6]).on("zoom", (e) => g.attr("transform", e.transform));
+const zoom = d3.zoom().scaleExtent([0.08, 8]).on("zoom", e => g.attr("transform", e.transform));
 svg.call(zoom);
 
-// Color topic nodes by shared count
-data.nodes.forEach(n => {
-  if (n.type === "topic") {
-    n.color = n.count > 1 ? "#FFEB3B" : "#546E7A";
-  }
+// Lookup maps
+const nodeMap = {};
+data.nodes.forEach(n => nodeMap[n.id] = n);
+const linkMap = {};
+data.links.forEach(l => {
+  const sid = typeof l.source === 'object' ? l.source.id : l.source;
+  const tid = typeof l.target === 'object' ? l.target.id : l.target;
+  if (!linkMap[sid]) linkMap[sid] = [];
+  if (!linkMap[tid]) linkMap[tid] = [];
+  linkMap[sid].push({target: tid, type: l.type, topic: l.topic});
+  linkMap[tid].push({target: sid, type: l.type, topic: l.topic});
 });
 
-// Links
 const link = g.append("g").selectAll("line")
-  .data(data.links)
-  .join("line")
-  .attr("stroke", d => d.type === "shared" ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.07)")
-  .attr("stroke-width", d => d.type === "shared" ? 1.5 : 0.8)
-  .attr("stroke-dasharray", d => d.type === "shared" ? "4,3" : "none");
+  .data(data.links).join("line")
+  .attr("stroke", d => d.type === "shared" ? "rgba(255,215,0,0.12)" : "rgba(255,255,255,0.06)")
+  .attr("stroke-width", d => d.type === "shared" ? 1.8 : 0.8)
+  .attr("stroke-dasharray", d => d.type === "shared" ? "5,4" : "none");
 
-// Nodes
 const node = g.append("g").selectAll("g")
-  .data(data.nodes)
-  .join("g")
-  .call(d3.drag().on("start", (e,d) => { if(!e.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+  .data(data.nodes).join("g")
+  .call(d3.drag()
+    .on("start", (e,d) => { if(!e.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
     .on("drag", (e,d) => { d.fx=e.x; d.fy=e.y; })
     .on("end", (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }));
 
 node.append("circle")
   .attr("r", d => d.r || 10)
   .attr("fill", d => d.color)
-  .attr("stroke", d => d.type === "file" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)")
+  .attr("stroke", d => d.type === "file" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.08)")
   .attr("stroke-width", 1.5)
-  .attr("opacity", 0.9);
+  .attr("opacity", 0.85);
 
 node.append("text")
-  .text(d => d.label)
-  .attr("x", d => (d.r || 10) + 6)
-  .attr("y", 3)
-  .attr("fill", d => d.type === "file" ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.5)")
-  .attr("font-size", d => d.type === "file" ? 10 : 8)
+  .text(d => d.emoji ? d.emoji + ' ' + d.label : d.label)
+  .attr("x", d => (d.r || 10) + 8)
+  .attr("y", 4)
+  .attr("fill", d => d.type === "file" ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.4)")
+  .attr("font-size", d => d.type === "file" ? 11 : 9)
+  .attr("font-weight", d => d.type === "file" ? 500 : 400)
   .style("pointer-events", "none")
-  .style("text-shadow", "0 1px 3px rgba(0,0,0,0.9)");
+  .style("text-shadow", "0 1px 4px rgba(0,0,0,0.9)");
 
-// Tooltip
-const tip = d3.select("#tooltip");
-node.on("mouseover", function(e, d) {
-  const r = this.getBoundingClientRect();
-  let html = '<div class="tt-name">' + (d.type === "file" ? "📄 " : "🏷️ ") + d.fullName + '</div>';
-  html += '<div class="tt-meta">' + d.type + (d.category && d.category !== "shared" ? " · " + d.category : "") + '</div>';
-  if (d.count && d.count > 1) html += '<div class="tt-files">🔗 ' + d.count + ' files: ' + (d.files || []).join(", ") + '</div>';
-  tip.html(html).style("display","block").style("left",(r.left+15)+"px").style("top",(r.top-10)+"px");
-  d3.select(this).select("circle").attr("stroke","#fff").attr("stroke-width",2.5);
-}).on("mouseout", function(e,d) {
-  tip.style("display","none");
-  d3.select(this).select("circle").attr("stroke",d.type==="file"?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.1)").attr("stroke-width",1.5);
-});
+// Hover highlighting
+node.on("mouseenter", function(e, d) {
+  const connected = new Set();
+  if (linkMap[d.id]) linkMap[d.id].forEach(l => connected.add(l.target));
+  node.attr("opacity", n => n.id === d.id ? 1 : (connected.has(n.id) ? 1 : 0.12));
+  link.attr("opacity", l => {
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    if (sid === d.id || tid === d.id) return 0.6;
+    if (connected.has(sid) && connected.has(tid)) return 0.3;
+    return 0.04;
+  });
+}).on("mouseleave", function() {
+  node.attr("opacity", 0.85);
+  link.attr("opacity", l => l.type === "shared" ? 0.3 : 0.15);
+}).on("click", function(e, d) { openSidebar(d); });
 
-// Simulation
+// Force simulation
 const sim = d3.forceSimulation(data.nodes)
-  .force("link", d3.forceLink(data.links).id(d => d.id).distance(d => d.type === "shared" ? 60 : 90))
-  .force("charge", d3.forceManyBody().strength(d => d.type === "file" ? -200 : -100))
+  .force("link", d3.forceLink(data.links).id(d => d.id).distance(d => d.type === "shared" ? 50 : 80))
+  .force("charge", d3.forceManyBody().strength(d => d.type === "file" ? -180 : -80))
   .force("center", d3.forceCenter(w/2, h/2))
-  .force("collision", d3.forceCollide().radius(d => (d.r||10) + 10))
+  .force("collision", d3.forceCollide().radius(d => (d.r||10) + 12))
   .on("tick", () => {
     link.attr("x1", d=>d.source.x).attr("y1", d=>d.source.y).attr("x2", d=>d.target.x).attr("y2", d=>d.target.y);
-    node.attr("transform", d=>`translate(${d.x},${d.y})`);
+    node.attr("transform", d=>"translate("+d.x+","+d.y+")");
   });
+
+// ===== INTERACTIVITY =====
 
 function filterGraph(q) {
   const ql = q.toLowerCase();
   node.style("opacity", d => {
     if (!ql) return 1;
-    const match = d.fullName.toLowerCase().includes(ql) || d.label.toLowerCase().includes(ql) || (d.files && d.files.some(f => f.includes(ql)));
-    return match ? 1 : 0.08;
+    const match = (d.fullName && d.fullName.toLowerCase().includes(ql)) ||
+                  (d.label && d.label.toLowerCase().includes(ql)) ||
+                  (d.topics && d.topics.some(t => t.toLowerCase().includes(ql))) ||
+                  (d.id && d.id.toLowerCase().includes(ql));
+    return match ? 1 : 0.05;
   });
-  link.style("opacity", d => {
-    if (!ql) return d.type === "shared" ? 0.4 : 0.3;
-    const findNode = id => data.nodes.find(n => n.id === (typeof id === "object" ? id.id : id));
-    const s = findNode(d.source), t = findNode(d.target);
-    const sVis = s && (s.fullName.toLowerCase().includes(ql) || s.label.toLowerCase().includes(ql));
-    const tVis = t && (t.fullName.toLowerCase().includes(ql) || t.label.toLowerCase().includes(ql));
-    return sVis && tVis ? 0.6 : 0.02;
+  link.style("opacity", l => {
+    if (!ql) return l.type === "shared" ? 0.3 : 0.15;
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    const s = nodeMap[sid], t = nodeMap[tid];
+    const inQ = n => n && ((n.fullName && n.fullName.toLowerCase().includes(ql)) || (n.label && n.label.toLowerCase().includes(ql)));
+    return (s && t && (inQ(s) || inQ(t))) ? 0.5 : 0.02;
   });
 }
 
-function resetZoom() {
+function filterCategory(cat) {
+  document.querySelectorAll('.filters button').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+  node.style("opacity", d => {
+    if (cat === "all") return 1;
+    if (cat === "shared") return d.shared ? 1 : (d.type === "file" ? 1 : 0.05);
+    return d.category === cat ? 1 : 0.05;
+  });
+  link.style("opacity", l => {
+    if (cat === "all") return l.type === "shared" ? 0.3 : 0.15;
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    const s = nodeMap[sid], t = nodeMap[tid];
+    const sVis = s && (cat === "shared" ? true : (s.category === cat || s.shared));
+    const tVis = t && (cat === "shared" ? true : (t.category === cat || t.shared));
+    return sVis && tVis ? (l.type === "shared" ? 0.4 : 0.2) : 0.02;
+  });
+}
+
+function openSidebar(d) {
+  const sb = document.getElementById('sidebar');
+  document.getElementById('sb-type').textContent = d.type === "file" ? "\uD83D\uDCC4 File" : "\uD83C\uDFF7\uFE0F Concept";
+  document.getElementById('sb-title').textContent = (d.emoji || '') + ' ' + d.fullName;
+  document.getElementById('sb-category').textContent = d.category || '';
+
+  const summaryEl = document.getElementById('sb-summary');
+  if (d.type === "file" && d.summary) {
+    summaryEl.textContent = d.summary;
+    summaryEl.style.display = 'block';
+  } else if (d.type === "topic") {
+    const cnt = d.count || 0;
+    summaryEl.textContent = cnt > 1 ? "This concept appears in " + cnt + " files, creating a knowledge bridge." : "This concept appears in 1 file.";
+    summaryEl.style.display = 'block';
+  } else {
+    summaryEl.style.display = 'none';
+  }
+
+  const topicsSection = document.getElementById('sb-topics-section');
+  const topicsEl = document.getElementById('sb-topics');
+  if (d.type === "file" && d.topics && d.topics.length) {
+    topicsSection.style.display = 'block';
+    topicsEl.innerHTML = d.topics.map(t => {
+      const slug = t.toLowerCase().replace(/ /g,'_').replace(/[\/\-']/g,'').substring(0,50);
+      return '<span class="sb-topic" onclick="highlightTopic(\'' + slug + '\')">' + t + '</span>';
+    }).join('');
+  } else {
+    topicsSection.style.display = 'none';
+  }
+
+  const filesSection = document.getElementById('sb-files-section');
+  const filesEl = document.getElementById('sb-files');
+  if (d.type === "topic" && d.files && d.files.length) {
+    filesSection.style.display = 'block';
+    filesEl.innerHTML = d.files.map(fid => {
+      const f = nodeMap[fid];
+      return f ? '<div class="sb-related-item" onclick="highlightFile(\'' + fid + '\')">\uD83D\uDCC4 ' + f.fullName + '</div>' : '';
+    }).join('');
+  } else {
+    filesSection.style.display = 'none';
+  }
+
+  const relatedSection = document.getElementById('sb-related-section');
+  const relatedEl = document.getElementById('sb-related');
+  if (d.type === "file" && linkMap[d.id]) {
+    const seen = new Set();
+    const related = [];
+    linkMap[d.id].forEach(l => {
+      if (l.type === "shared" && !seen.has(l.target)) {
+        seen.add(l.target);
+        const fn = nodeMap[l.target];
+        if (fn && fn.type === "file") related.push(fn);
+      }
+    });
+    if (related.length) {
+      relatedSection.style.display = 'block';
+      relatedEl.innerHTML = related.map(r => '<div class="sb-related-item" onclick="highlightFile(\'' + r.id + '\')">\uD83D\uDD17 ' + r.fullName + '</div>').join('');
+    } else {
+      relatedSection.style.display = 'none';
+    }
+  } else {
+    relatedSection.style.display = 'none';
+  }
+
+  const driveSection = document.getElementById('sb-drive-section');
+  const driveEl = document.getElementById('sb-drive');
+  if (d.type === "file" && d.driveUrl) {
+    driveSection.style.display = 'block';
+    driveEl.href = d.driveUrl;
+  } else {
+    driveSection.style.display = 'none';
+  }
+  sb.classList.add('open');
+}
+
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); }
+
+function highlightTopic(slug) {
+  filterCategory('all');
+  const q = document.getElementById('search');
+  const target = nodeMap[slug];
+  q.value = target ? target.fullName : slug;
+  filterGraph(q.value);
+  closeSidebar();
+}
+
+function highlightFile(fid) {
+  filterCategory('all');
+  const f = nodeMap[fid];
+  if (f) {
+    const q = document.getElementById('search');
+    q.value = f.fullName;
+    filterGraph(f.fullName);
+    openSidebar(f);
+  }
+}
+
+function resetView() {
+  document.getElementById('search').value = '';
+  filterGraph('');
+  filterCategory('all');
+  document.querySelectorAll('.filters button')[0].classList.add('active');
+  closeSidebar();
   svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
 }
+
+// Initial opacity
+link.attr("opacity", l => l.type === "shared" ? 0.3 : 0.15);
 </script>
 </body>
 </html>
