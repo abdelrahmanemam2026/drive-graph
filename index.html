@@ -3,137 +3,156 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Knowledge Mind Map</title>
+<title>Knowledge Hub — Interactive Learning</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { 
-    background: #0a0a14; color: #e0e0e0; 
-    font-family: 'Segoe UI', system-ui, sans-serif; 
-    overflow: hidden; height: 100vh;
-    cursor: grab;
-  }
-  body:active { cursor: grabbing; }
+  body { background: #08080f; color: #e0e0e0; font-family: 'Inter', sans-serif; min-height: 100vh; }
   
-  #canvas {
-    width: 100vw; height: 100vh;
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 60px 20px 30px;
+    background: linear-gradient(180deg, rgba(255,215,0,0.04) 0%, transparent 100%);
+  }
+  .hero h1 { font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .hero h1 span { color: #FFD700; }
+  .hero p { font-size: 14px; color: #666; max-width: 500px; margin: 0 auto; line-height: 1.5; }
+  .hero .stats { display: flex; gap: 24px; justify-content: center; margin-top: 16px; font-size: 12px; color: #555; }
+  .hero .stats strong { color: #888; }
+  
+  /* Grid */
+  .grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+  }
+  
+  /* Cards */
+  .card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
     position: relative;
-    transform-origin: 0 0;
+    overflow: hidden;
   }
-  
-  .mm-node {
+  .card::before {
+    content: '';
     position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 3px;
+    background: var(--card-color);
+    opacity: 0.6;
+    transition: opacity 0.25s;
+  }
+  .card:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  .card:hover::before { opacity: 1; }
+  .card:active { transform: translateY(0); }
+  
+  .card .card-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .card .card-icon {
+    width: 36px; height: 36px;
     border-radius: 10px;
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s;
-    user-select: none;
-    border: 1px solid rgba(255,255,255,0.06);
-    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
   }
-  .mm-node:hover {
-    transform: scale(1.05);
-    z-index: 10;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  }
-  .mm-node.center {
-    font-size: 20px;
-    font-weight: 700;
-    padding: 14px 28px;
-    border-radius: 16px;
-    border: 2px solid rgba(255,215,0,0.3);
-    box-shadow: 0 0 40px rgba(255,215,0,0.1);
-    z-index: 100;
-  }
-  .mm-node.category {
+  .card .card-name {
     font-size: 15px;
     font-weight: 600;
-    padding: 10px 20px;
-    border-radius: 12px;
-    border-width: 1.5px;
-  }
-  .mm-node.file {
-    font-size: 11px;
-    padding: 5px 12px;
-    border-radius: 8px;
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .mm-node.leaf {
-    font-size: 10px;
-    padding: 3px 10px;
-    border-radius: 6px;
-    opacity: 0.75;
-    border-style: dashed;
-  }
-  .mm-node .emoji { font-size: 1.2em; }
-  
-  /* Lines between nodes */
-  .mm-line {
-    position: absolute;
-    pointer-events: none;
-    z-index: 0;
-  }
-  
-  /* Controls */
-  .controls {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-  .controls button {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #ccc;
-    padding: 8px 16px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.2s;
-    backdrop-filter: blur(8px);
-  }
-  .controls button:hover {
-    background: rgba(255,255,255,0.12);
     color: #fff;
   }
-  .controls .zoom-level {
-    color: #555;
+  .card .card-summary {
     font-size: 12px;
-    min-width: 40px;
-    text-align: center;
+    color: #888;
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .card .card-sources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .card .card-source {
+    font-size: 9px;
+    padding: 2px 8px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 10px;
+    color: #555;
+  }
+  .card .card-connections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .card .card-conn {
+    font-size: 9px;
+    padding: 2px 8px;
+    background: rgba(255,215,0,0.06);
+    border-radius: 10px;
+    color: #FFD700;
+    opacity: 0.5;
   }
   
-  /* Sidebar */
-  .sidebar {
+  /* Expanded card / detail panel */
+  .detail-overlay {
     position: fixed;
-    right: -400px;
-    top: 0;
-    width: 360px;
-    height: 100vh;
-    background: rgba(16,16,30,0.97);
-    backdrop-filter: blur(20px);
-    border-left: 1px solid rgba(255,255,255,0.06);
-    z-index: 2000;
-    transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
-    padding: 28px 24px;
-    overflow-y: auto;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 900;
+    display: none;
+    animation: fadeIn 0.2s ease;
   }
-  .sidebar.open { right: 0; }
-  .sidebar .close-sb {
+  .detail-overlay.open { display: block; }
+  
+  .detail-panel {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    width: 90%;
+    max-width: 680px;
+    max-height: 85vh;
+    background: #12121e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    z-index: 1000;
+    padding: 32px 28px;
+    overflow-y: auto;
+    display: none;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .detail-panel.open {
+    display: block;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  
+  .detail-panel .dp-close {
     position: absolute;
     top: 16px; right: 16px;
-    width: 32px; height: 32px;
+    width: 34px; height: 34px;
     border-radius: 50%;
     border: none;
     background: rgba(255,255,255,0.06);
@@ -143,429 +162,341 @@
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-  .sidebar .close-sb:hover { background: rgba(255,255,255,0.12); color: #fff; }
-  .sidebar .sb-title {
-    font-size: 18px; font-weight: 600; color: #fff;
-    margin-bottom: 6px; padding-right: 30px;
-  }
-  .sidebar .sb-sub {
-    font-size: 12px; color: #888; margin-bottom: 14px;
-  }
-  .sidebar .sb-summary {
-    font-size: 13px; line-height: 1.6; color: #bbb;
-    padding: 12px 14px;
-    background: rgba(255,255,255,0.03);
-    border-radius: 10px;
-    border-left: 3px solid #FFD700;
-    margin-bottom: 16px;
-  }
-  .sidebar .sb-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: rgba(255,255,255,0.06);
-    border-radius: 8px;
-    color: #ccc;
-    text-decoration: none;
-    font-size: 13px;
     transition: all 0.2s;
   }
-  .sidebar .sb-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
-  .sidebar::-webkit-scrollbar { width: 4px; }
-  .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  .detail-panel .dp-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  
+  .detail-panel .dp-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-right: 40px;
+  }
+  .detail-panel .dp-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .detail-panel .dp-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .detail-panel .dp-summary {
+    font-size: 14px;
+    color: #888;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 10px;
+    border-left: 3px solid var(--dp-color, #FFD700);
+  }
+  .detail-panel .dp-section {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+  .detail-panel .dp-knowledge {
+    list-style: none;
+    padding: 0;
+  }
+  .detail-panel .dp-knowledge li {
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #bbb;
+    border-left: 2px solid rgba(255,255,255,0.05);
+    transition: all 0.2s;
+  }
+  .detail-panel .dp-knowledge li:hover {
+    background: rgba(255,255,255,0.04);
+    border-left-color: var(--dp-color, #FFD700);
+  }
+  .detail-panel .dp-knowledge li::before {
+    content: '•';
+    color: var(--dp-color, #FFD700);
+    margin-right: 8px;
+    font-weight: bold;
+  }
+  .detail-panel .dp-sources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .detail-panel .dp-source {
+    font-size: 11px;
+    padding: 4px 12px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 20px;
+    color: #aaa;
+  }
+  .detail-panel .dp-connections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .detail-panel .dp-connection {
+    font-size: 11px;
+    padding: 4px 14px;
+    background: rgba(255,215,0,0.06);
+    border: 1px solid rgba(255,215,0,0.12);
+    border-radius: 20px;
+    color: #FFD700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .detail-panel .dp-connection:hover {
+    background: rgba(255,215,0,0.12);
+  }
+  
+  /* Search */
+  .search-bar {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  .search-bar input {
+    width: 100%;
+    padding: 12px 18px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    color: #eee;
+    font-size: 14px;
+    outline: none;
+    transition: border 0.2s;
+    font-family: inherit;
+  }
+  .search-bar input:focus {
+    border-color: rgba(255,215,0,0.3);
+  }
+  .search-bar input::placeholder { color: #444; }
+  
+  /* Empty state */
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #555;
+    font-size: 14px;
+  }
+  
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .card:nth-child(1) { animation: fadeIn 0.3s ease both; }
+  .card:nth-child(2) { animation: fadeIn 0.3s ease 0.04s both; }
+  .card:nth-child(3) { animation: fadeIn 0.3s ease 0.08s both; }
+  .card:nth-child(4) { animation: fadeIn 0.3s ease 0.12s both; }
+  .card:nth-child(5) { animation: fadeIn 0.3s ease 0.16s both; }
+  .card:nth-child(6) { animation: fadeIn 0.3s ease 0.20s both; }
+  .card:nth-child(7) { animation: fadeIn 0.3s ease 0.24s both; }
+  .card:nth-child(8) { animation: fadeIn 0.3s ease 0.28s both; }
+  .card:nth-child(9) { animation: fadeIn 0.3s ease 0.32s both; }
+  .card:nth-child(10) { animation: fadeIn 0.3s ease 0.36s both; }
+  .card:nth-child(11) { animation: fadeIn 0.3s ease 0.40s both; }
+  .card:nth-child(12) { animation: fadeIn 0.3s ease 0.44s both; }
+  .card:nth-child(13) { animation: fadeIn 0.3s ease 0.48s both; }
+  
+  /* Scrollbar */
+  .detail-panel::-webkit-scrollbar { width: 4px; }
+  .detail-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 24px; }
+    .detail-panel { width: 95%; padding: 20px; max-height: 90vh; }
+  }
 </style>
 </head>
 <body>
 
-<div id="canvas"></div>
-
-<div class="controls">
-  <button onclick="zoomIn()">+</button>
-  <span class="zoom-level" id="zoomLevel">100%</span>
-  <button onclick="zoomOut()">−</button>
-  <button onclick="resetView()">⟲ Fit</button>
-  <button onclick="toggleLayout()">↻ Layout</button>
+<div class="hero">
+  <h1>?? <span>Knowledge Hub</span></h1>
+  <p>Aggregated knowledge from all files — concepts, insights, and connections in one place.</p>
+  <div class="stats">
+    <span><strong id="conceptCount">0</strong> concepts</span>
+    <span><strong id="sourceCount">0</strong> sources</span>
+    <span><strong id="insightCount">0</strong> insights</span>
+  </div>
 </div>
 
-<div class="sidebar" id="sidebar">
-  <button class="close-sb" onclick="closeSidebar()">✕</button>
-  <div class="sb-title" id="sbTitle"></div>
-  <div class="sb-sub" id="sbSub"></div>
-  <div class="sb-summary" id="sbSummary"></div>
-  <div id="sbLinkArea"></div>
+<div class="search-bar">
+  <input id="search" type="text" placeholder="Search concepts, insights, or sources..." oninput="filterCards(this.value)">
+</div>
+
+<div class="grid" id="grid"></div>
+
+<!-- Detail Panel -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <button class="dp-close" onclick="closeDetail()">✕</button>
+  <div class="dp-header">
+    <div class="dp-icon" id="dpIcon"></div>
+    <div class="dp-title" id="dpTitle"></div>
+  </div>
+  <div class="dp-summary" id="dpSummary"></div>
+  
+  <div class="dp-section">?? Insights & Knowledge</div>
+  <ul class="dp-knowledge" id="dpKnowledge"></ul>
+  
+  <div class="dp-section" style="margin-top:24px;">?? Sources</div>
+  <div class="dp-sources" id="dpSources"></div>
+  
+  <div class="dp-section">?? Connections</div>
+  <div class="dp-connections" id="dpConnections"></div>
 </div>
 
 <script>
-const data = {"name": "Knowledge Base", "emoji": "\ud83e\udde0", "color": "#FFD700", "children": [{"name": "AI & Agents", "emoji": "\ud83e\udd16", "color": "#2196F3", "children": [{"name": "7 Hermes Uses", "emoji": "\ud83e\udd16", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1JQq0t7iJQXwKlwM_9xYxdsepKRuGRRJO/view", "summary": "Seven real-world Hermes Agent use cases: cron jobs, Kanban, Obsidian, Hyperframes, Tailscale, and skillification.", "children": [{"name": "Cron Jobs", "color": "#64B5F6", "leaf": true}, {"name": "AI Kanban", "color": "#64B5F6", "leaf": true}, {"name": "Obsidian Integration", "color": "#64B5F6", "leaf": true}, {"name": "Tailscale", "color": "#64B5F6", "leaf": true}, {"name": "Hyperframes", "color": "#64B5F6", "leaf": true}, {"name": "Skillification", "color": "#64B5F6", "leaf": true}]}, {"name": "Obsidian + Hermes", "emoji": "\ud83e\udde0", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1ZpxWtSKOYDwygHV9lI12B089Xm3Ofuuv/view", "summary": "Connect Hermes Agent to Obsidian for persistent long-term memory via read/write/search/link notes.", "children": [{"name": "Second Brain", "color": "#64B5F6", "leaf": true}, {"name": "Long-term Memory", "color": "#64B5F6", "leaf": true}, {"name": "Knowledge Flywheel", "color": "#64B5F6", "leaf": true}, {"name": "Markdown KM", "color": "#64B5F6", "leaf": true}]}, {"name": "Coolify / Self-host", "emoji": "\ud83d\ude80", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1Mp6uGod7iMuaSGJbw34zuAX1JG73QiSi/view", "summary": "Self-host Coolify (open-source Vercel alternative) on a $5 VPS with CI/CD, databases, and SSL.", "children": [{"name": "Docker VPS", "color": "#64B5F6", "leaf": true}, {"name": "CI/CD", "color": "#64B5F6", "leaf": true}, {"name": "PostgreSQL", "color": "#64B5F6", "leaf": true}, {"name": "SSL", "color": "#64B5F6", "leaf": true}]}, {"name": "Paywall $50M", "emoji": "\ud83d\udcb0", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1CO2Jee1D-YNE-9sGZkPxtcplXw31n4T2/view", "summary": "Paywall strategies generating $50M+ \u2014 treat the paywall as a revenue engine, not a UI element.", "children": [{"name": "Monetization", "color": "#64B5F6", "leaf": true}, {"name": "Conversion", "color": "#64B5F6", "leaf": true}, {"name": "Pricing", "color": "#64B5F6", "leaf": true}, {"name": "Free Trial", "color": "#64B5F6", "leaf": true}]}, {"name": "Hermes Work Graph", "emoji": "\ud83d\udd17", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1l499k9vSFEfXR9-qc-hdphWAP-VuUw4O/view", "summary": "\u0627\u0633\u062a\u062e\u062f\u0627\u0645 Hermes Work \u0648\u0645\u0639 Graph Engineer \u0644\u062a\u062d\u0648\u064a\u0644 \u0627\u0644\u0645\u0644\u0627\u062d\u0638\u0627\u062a \u0625\u0644\u0649 Knowledge Graph \u0645\u0646\u0638\u0645.", "children": [{"name": "Graph Engineer", "color": "#64B5F6", "leaf": true}, {"name": "Knowledge Org", "color": "#64B5F6", "leaf": true}, {"name": "Second Brain", "color": "#64B5F6", "leaf": true}]}, {"name": "Odysseus vs Hermes", "emoji": "\u2694\ufe0f", "color": "#42A5F5", "link": "https://drive.google.com/file/d/16sFiMQsVaiiiu3BJ7nGK1oDeQuQlcRWy/view", "summary": "\u0645\u0642\u0627\u0631\u0646\u0629 Odysseus \u0648 Hermes Agent: \u0627\u0644\u0628\u0633\u0627\u0637\u0629 vs \u0627\u0644\u062a\u062e\u0635\u064a\u0635 \u0627\u0644\u0645\u062a\u0642\u062f\u0645 \u0648\u0627\u0644\u062a\u0643\u0644\u0641\u0629.", "children": [{"name": "Multi-agent", "color": "#64B5F6", "leaf": true}, {"name": "Orchestration", "color": "#64B5F6", "leaf": true}, {"name": "Self-hosting", "color": "#64B5F6", "leaf": true}]}, {"name": "AI Content Studio", "emoji": "\ud83c\udfac", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1k5VbclAIROpUiYzsV7V54sbfI_acpWV0/view", "summary": "5-agent autonomous content studio on $5 VPS controlled via Telegram with Tailscale security.", "children": [{"name": "5 Agents", "color": "#64B5F6", "leaf": true}, {"name": "Telegram UI", "color": "#64B5F6", "leaf": true}, {"name": "Tailscale", "color": "#64B5F6", "leaf": true}, {"name": "API Integration", "color": "#64B5F6", "leaf": true}]}, {"name": "Managing AI Agents", "emoji": "\ud83c\udfc6", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1Zi93ODou57S32hRUoWq3m9P1QDEIhC64/view", "summary": "Managing AI agents is the 2026 most valuable skill \u2014 shipping 22-40 PRs daily as a team of one.", "children": [{"name": "Cloud VM", "color": "#64B5F6", "leaf": true}, {"name": "Model Routing", "color": "#64B5F6", "leaf": true}, {"name": "Cost Optimization", "color": "#64B5F6", "leaf": true}, {"name": "Automation", "color": "#64B5F6", "leaf": true}]}, {"name": "Hermes Config", "emoji": "\u2699\ufe0f", "color": "#42A5F5", "link": "https://drive.google.com/document/d/1M4u5tpNh05-8RpftztBd8v5RsNWK7XzapR0PMrZXqok/edit", "summary": "Optimize Hermes Agent: context limits, sub-agents, cost optimization, compression, YOLO mode.", "children": [{"name": "Sub-agents", "color": "#64B5F6", "leaf": true}, {"name": "Context Limits", "color": "#64B5F6", "leaf": true}, {"name": "YOLO Mode", "color": "#64B5F6", "leaf": true}, {"name": "Cost Opt", "color": "#64B5F6", "leaf": true}]}]}, {"name": "Productivity", "emoji": "\u26a1", "color": "#9C27B0", "children": [{"name": "Productivity Systems", "emoji": "\u26a1", "color": "#AB47BC", "link": "https://drive.google.com/file/d/1G_4j5qZ5pI8AFLQajUJArOdqnQWdBJOR/view", "summary": "Dr. Justin Sung's 4-part productivity system makes productive behavior the default path of least resistance.", "children": [{"name": "Systems over Willpower", "color": "#CE93D8", "leaf": true}, {"name": "Environment Design", "color": "#CE93D8", "leaf": true}, {"name": "Process Engineering", "color": "#CE93D8", "leaf": true}, {"name": "Cognitive Load", "color": "#CE93D8", "leaf": true}, {"name": "Self-regulated Learning", "color": "#CE93D8", "leaf": true}]}]}, {"name": "Marketing & SaaS", "emoji": "\ud83d\udcb3", "color": "#FF9800", "children": [{"name": "Payment Gateways", "emoji": "\ud83d\udcb3", "color": "#FFA726", "link": "https://drive.google.com/file/d/1ivgR_oWyHsoXDH0OjW6gg27qCHFA7UFi/view", "summary": "\u0645\u0642\u0627\u0631\u0646\u0629 13 \u0628\u0648\u0627\u0628\u0629 \u062f\u0641\u0639 SaaS \u2014 Stripe, Paddle, PayMob \u0644\u0644\u0645\u0624\u0633\u0633\u064a\u0646 \u0627\u0644\u0623\u0641\u0631\u0627\u062f \u0641\u064a \u0627\u0644\u0634\u0631\u0642 \u0627\u0644\u0623\u0648\u0633\u0637.", "children": [{"name": "Stripe", "color": "#FFCC80", "leaf": true}, {"name": "Merchant of Record", "color": "#FFCC80", "leaf": true}, {"name": "MENA Payments", "color": "#FFCC80", "leaf": true}, {"name": "Crypto", "color": "#FFCC80", "leaf": true}, {"name": "Risk Management", "color": "#FFCC80", "leaf": true}]}, {"name": "Cold Email SaaS", "emoji": "\ud83d\udce7", "color": "#FFA726", "link": "https://drive.google.com/file/d/1ed6zEFXkO2AB27FX9PgT8H1sZU_ztkUg/view", "summary": "Cold email for SaaS: AIDA/BANT frameworks, 10 templates, deliverability best practices.", "children": [{"name": "AIDA Framework", "color": "#FFCC80", "leaf": true}, {"name": "Email Deliverability", "color": "#FFCC80", "leaf": true}, {"name": "Lead Generation", "color": "#FFCC80", "leaf": true}, {"name": "Sales Funnel", "color": "#FFCC80", "leaf": true}, {"name": "10 Templates", "color": "#FFCC80", "leaf": true}]}]}, {"name": "Quran", "emoji": "\ud83d\udcd6", "color": "#4CAF50", "children": [{"name": "Surah Al-Baqarah Virtues", "emoji": "\ud83d\udcd6", "color": "#66BB6A", "link": "https://drive.google.com/file/d/1l3WGTdKRrJF0DrY7ZeL1-GglnufOvtK2/view", "summary": "\u0641\u0636\u0627\u0626\u0644 \u0633\u0648\u0631\u0629 \u0627\u0644\u0628\u0642\u0631\u0629: \u0628\u0631\u0643\u0629 \u0641\u064a \u0627\u0644\u0648\u0642\u062a \u0648\u0627\u0644\u0631\u0632\u0642 \u0648\u0627\u0644\u0623\u0647\u0644\u060c \u0648\u062d\u0633\u0631\u0629 \u062a\u0631\u0643\u0647\u0627\u060c \u0648\u0634\u0641\u064a\u0639 \u0644\u0635\u0627\u062d\u0628\u0647\u0627 \u064a\u0648\u0645 \u0627\u0644\u0642\u064a\u0627\u0645\u0629.", "children": [{"name": "Blessings Barakah", "color": "#A5D6A7", "leaf": true}, {"name": "Intercession", "color": "#A5D6A7", "leaf": true}, {"name": "Protection", "color": "#A5D6A7", "leaf": true}, {"name": "Learning Stages", "color": "#A5D6A7", "leaf": true}]}, {"name": "Baqarah Changes Life", "emoji": "\ud83d\udd4c", "color": "#66BB6A", "link": "https://drive.google.com/file/d/1qE7AiAm90lA-7YFfbosEzqBTRQq34xfb/view", "summary": "\u0645\u062d\u0627\u0636\u0631\u0629 \u0627\u0644\u0634\u064a\u062e \u0645\u062d\u0645\u062f \u0627\u0644\u063a\u0644\u064a\u062b: \u062a\u0639\u0644\u0645 \u0633\u0648\u0631\u0629 \u0627\u0644\u0628\u0642\u0631\u0629 \u062a\u062f\u0631\u064a\u062c\u064a\u0627\u064b \u0648\u0645\u0627 \u064a\u0646\u062a\u0638\u0631 \u0623\u0647\u0644\u0647\u0627 \u0645\u0646 \u062a\u0643\u0631\u064a\u0645.", "children": [{"name": "Yaqeen", "color": "#A5D6A7", "leaf": true}, {"name": "Parents Honor", "color": "#A5D6A7", "leaf": true}, {"name": "Paradise", "color": "#A5D6A7", "leaf": true}, {"name": "Gradual Learning", "color": "#A5D6A7", "leaf": true}]}]}]};
+const data = {"concepts": [{"id": "hermes-agent", "name": "Hermes Agent", "emoji": "??", "color": "#2196F3", "summary": "AI agent framework for automating complex workflows via skills, plugins, cron jobs, and multi-agent orchestration.", "knowledge": ["Hermes Agent is an open-source AI agent framework that runs in the terminal and connects to Telegram, Discord, and other platforms.", "It features a Skills System for reusable workflows, Plugins for extensibility, Cron Jobs for scheduled automation, and persistent Memory.", "Supports multi-agent orchestration — multiple specialized agents working together with structured JSON handoffs.", "Can be configured via YAML/config files for context limits, sub-agent concurrency, cost optimization, and YOLO mode.", "Integrates with Obsidian for persistent long-term memory — reading, writing, searching, and linking notes automatically.", "Supports Tailscale remote gateways for controlling agents across devices securely.", "Skills can be created for repeatable workflows (Skillification) — turning any multi-step process into a reusable skill.", "Comparison with Odysseus: Hermes offers advanced customization, Skills System, Plugins, Cron Jobs, and Memory; Odysseus is simpler to set up."], "sources": ["7_hermes_uses.md", "obsidian_hermes.md", "hermes_config.txt", "hermes_work_graph.md", "odysseus_vs_hermes.md", "managing_ai_agents.md", "ai_content_studio.md"], "connections": ["second-brain", "multi-agent", "tailscale", "self-hosting", "obsidian", "knowledge-graph"]}, {"id": "second-brain", "name": "Second Brain", "emoji": "??", "color": "#9C27B0", "summary": "Persistent knowledge system combining Obsidian notes with AI agents for automated knowledge management.", "knowledge": ["A Second Brain is a personal knowledge management system where ideas, notes, and insights are stored and interconnected.", "Combining Obsidian (local-first Markdown vault) with Hermes Agent creates a knowledge flywheel: more notes → better AI context → better AI output → more notes.", "Hermes Agent can read, write, search, and link notes in your Obsidian vault automatically — turning Obsidian into persistent long-term memory.", "The Graph Engineer skill in Hermes Work helps organize scattered notes into a connected Knowledge Graph.", "Dr. Justin Sung's productivity system: Intention → Environment → Process → Review — making productive behavior the path of least resistance.", "Knowledge management is about reducing cognitive load and creating systems that compound over time.", "Organizing knowledge as a graph (nodes and edges) rather than a folder hierarchy enables serendipitous discovery and cross-domain connections."], "sources": ["obsidian_hermes.md", "hermes_work_graph.md", "7_hermes_uses.md", "productivity_systems.md"], "connections": ["hermes-agent", "obsidian", "knowledge-graph", "productivity"]}, {"id": "multi-agent", "name": "Multi-Agent Systems", "emoji": "??", "color": "#00BCD4", "summary": "Multiple specialized AI agents working together in orchestrated pipelines for complex autonomous workflows.", "knowledge": ["Multi-agent systems use multiple specialized AI agents, each with a single responsibility, coordinated by an orchestrator.", "The 5-agent content studio pattern: Atlas (research) → Vera (writing) → Kite (design) → Orin (publishing) → Orchestrator (coordination) with structured JSON handoffs between them.", "Ryan Carson's system ships 22-40 PRs daily as a team of one by using cloud VMs for 50x parallel output and a self-improvement loop agent (Grace) that ships ~3 fixes/day.", "Model routing between different AI models optimizes token costs — reducing from $20K/month to $5K/month.", "Three must-build automations: signup test automation, watchdog/monitoring, and self-improvement loop.", "Managing AI agents is considered the most valuable skill of 2026 — 50% of management can be done from a phone.", "Single responsibility per agent pattern is key: each agent does one thing well and passes structured data to the next."], "sources": ["ai_content_studio.md", "managing_ai_agents.md", "odysseus_vs_hermes.md", "7_hermes_uses.md"], "connections": ["hermes-agent", "automation", "self-hosting", "cost-optimization"]}, {"id": "self-hosting", "name": "Self-Hosting & Infrastructure", "emoji": "??", "color": "#4CAF50", "summary": "Deploying applications and services on your own VPS/servers instead of managed cloud platforms.", "knowledge": ["Coolify is an open-source, self-hosted alternative to Vercel/Heroku that runs on a $5/month VPS with Docker.", "Features: automatic CI/CD from Git push, one-click PostgreSQL database provisioning, free SSL via Let's Encrypt, one-click rollback.", "A 5-agent autonomous content studio runs entirely on a $5/month VPS, controlled via Telegram with Tailscale for secure access.", "Cloud VM over local machine is recommended for 50x parallel output in AI agent operations.", "Self-hosting vs managed platforms: self-hosting costs less but requires more technical setup and maintenance.", "Tailscale provides secure cross-device access: agents running on a VPS can be controlled from any device via Tailscale tunnel.", "Docker-based deployment makes self-hosting reproducible and simplifies dependency management."], "sources": ["coolify_vercel.md", "ai_content_studio.md", "odysseus_vs_hermes.md", "7_hermes_uses.md"], "connections": ["docker", "tailscale", "vps", "multi-agent"]}, {"id": "tailscale", "name": "Tailscale & Remote Access", "emoji": "??", "color": "#8BC34A", "summary": "Secure mesh VPN for connecting devices and enabling remote access to self-hosted services.", "knowledge": ["Tailscale creates a secure WireGuard-based mesh network connecting all your devices, servers, and agents.", "Enables remote gateways: control Hermes Agent running on a VPS from your phone or laptop securely.", "Used in the AI content studio to provide secure access to the dashboard — only devices in the Tailnet can connect.", "Simplifies networking: no need to open ports, configure firewalls, or manage SSL certificates for internal services.", "Cross-device: connect Linux servers, Windows machines, phones, and tablets in one private network."], "sources": ["7_hermes_uses.md", "ai_content_studio.md"], "connections": ["self-hosting", "multi-agent", "hermes-agent"]}, {"id": "obsidian", "name": "Obsidian & Knowledge Management", "emoji": "??", "color": "#7C4DFF", "summary": "Local-first Markdown knowledge base with bi-directional linking and graph visualization.", "knowledge": ["Obsidian is a local-first Markdown-based note-taking app with bi-directional linking ([[wikilinks]]) and graph visualization.", "Integrating Obsidian with Hermes Agent creates persistent long-term memory: AI agents read, write, search, and link notes automatically.", "The knowledge flywheel: more notes lead to better AI context, which leads to better AI output, which produces more notes.", "Local-first means your data is stored as plain Markdown files on your device — no vendor lock-in, full ownership.", "Obsidian's Graph View shows connections between notes, revealing patterns and relationships you might miss.", "Bi-directional linking in Obsidian helps build a web of interconnected knowledge that compounds over time.", "Recommended workflow: Organizing scattered notes into connected knowledge via Knowledge Graphs rather than folder hierarchies."], "sources": ["obsidian_hermes.md", "hermes_work_graph.md", "7_hermes_uses.md"], "connections": ["second-brain", "knowledge-graph", "hermes-agent"]}, {"id": "knowledge-graph", "name": "Knowledge Graphs", "emoji": "??", "color": "#FF9800", "summary": "Visual representation of knowledge as interconnected nodes and edges for better learning and discovery.", "knowledge": ["A Knowledge Graph represents information as nodes (concepts/ideas) and edges (relationships), enabling non-linear discovery.", "Hermes Work's Graph Engineer skill helps create Knowledge Graphs from scattered notes automatically.", "Organizing knowledge as a graph rather than a folder hierarchy enables serendipitous discovery of cross-domain connections.", "Topics that appear in multiple files act as knowledge bridges — connecting different domains and revealing interdisciplinary insights.", "The graph view makes it easy to see which concepts are most connected (appear in many sources) and explore related ideas.", "Combined with Obsidian's bi-directional linking, Knowledge Graphs become powerful tools for learning and research."], "sources": ["hermes_work_graph.md", "obsidian_hermes.md", "7_hermes_uses.md"], "connections": ["second-brain", "obsidian", "hermes-agent"]}, {"id": "monetization", "name": "Monetization & Paywalls", "emoji": "??", "color": "#FF5722", "summary": "Strategies for converting users to paid customers through paywalls, pricing psychology, and payment infrastructure.", "knowledge": ["Paywalls should be treated as a revenue engine, not just a UI element — multi-step paywalls show 20-40% uplift over single-screen.", "Pricing frameworks: cost-plus pricing, competitor-based pricing, and value-based pricing — value-based is most effective for SaaS.", "Free trial psychology: upfront pricing before free trial increases conversion because users know what they're committing to.", "Discount gamification techniques (spin-the-wheel, social proof popups) can boost install-to-paid conversion.", "13 payment gateways compared for individual founders: Stripe, Paddle, Lemon Squeezy (global), PayMob, Fawry, PayTabs (MENA), USDC/Coinbase Commerce (crypto).", "Merchant of Record (MoR) services like Paddle and Lemon Squeezy handle tax compliance globally — critical for solo founders.", "Risk management: diversify payment processors to avoid account freeze disruptions, keep multi-currency accounts via Wise/Payoneer.", "Conversion optimization: trial toggles for different user intents (feature explorer vs committed buyer) improve free trial conversion."], "sources": ["paywall_50m.md", "payment_gateways_saas.md", "cold_email_saas.txt"], "connections": ["saas", "email-marketing", "conversion"]}, {"id": "saas", "name": "SaaS Business", "emoji": "??️", "color": "#795548", "summary": "Software-as-a-Service business strategies including payment infrastructure, cold email outreach, and growth tactics.", "knowledge": ["Cold email for SaaS: 7 proven steps include data gathering, personalization, AIDA framework, segmentation, and structured follow-up.", "Email deliverability is critical for SaaS cold outreach: SPF, DKIM, DMARC records, and domain warming before sending campaigns.", "10 cold email templates cover: initial outreach, follow-up, social proof, breakup emails, and re-engagement.", "Follow-up cadence: 3-7 touchpoints across email, LinkedIn, and phone for maximum conversion.", "AIDA framework (Attention, Interest, Desire, Action) and BANT (Budget, Authority, Need, Timing) structure effective sales messaging.", "For SaaS founders in MENA: local payment gateways like PayMob, Fawry, and PayTabs alongside global processors like Stripe.", "Lead generation for SaaS requires multi-channel approach: cold email + LinkedIn + content marketing + referrals."], "sources": ["cold_email_saas.txt", "payment_gateways_saas.md", "paywall_50m.md"], "connections": ["monetization", "email-marketing", "conversion"]}, {"id": "email-marketing", "name": "Email Marketing & Outreach", "emoji": "??", "color": "#E91E63", "summary": "Cold email and email marketing strategies for SaaS lead generation and customer acquisition.", "knowledge": ["AIDA (Attention, Interest, Desire, Action), BANT (Budget, Authority, Need, Timing), and CHARM are the three main cold email frameworks.", "Follow-up cadence matters: send 3-7 touchpoints across email, LinkedIn, and phone — most conversions happen after follow-up #3.", "Subject line best practices: personalized, curiosity-driven, specific (e.g., 'Quick question about [company]' vs generic).", "Email deliverability infrastructure: SPF (Sender Policy Framework), DKIM (DomainKeys Identified Mail), DMARC (Domain-based Message Authentication), and domain warming.", "Personalization rules: mention specific company details, recent events, or mutual connections — but don't over-personalize to the point of creepiness.", "Breakup emails: a final 'closing the loop' email can re-engage cold leads who are busy but interested."], "sources": ["cold_email_saas.txt"], "connections": ["saas", "monetization", "lead-generation"]}, {"id": "quran", "name": "سورة البقرة", "emoji": "??", "color": "#4CAF50", "summary": "فضائل سورة البقرة وأثرها في حياة المسلم وما ينتظر أهلها من التكريم.", "knowledge": ["سورة البقرة هي أطول سورة في القرآن، وقال النبي صلى الله عليه وسلم: «أخذها بركة، وتركها حسرة، ولا تستطيعها البطلة».", "هي وسورة آل عمران يُسميان الزهراوين، يأتيان يوم القيامة كأنهما غمامتان أو غيابتان يحاجان عن صاحبهما.", "بركة سورة البقرة تشمل: البركة في الوقت، والرزق، والأهل، والعمل، وحماية البيت من السحر والشياطين.", "تكريم والدي صاحب القرآن يوم القيامة: يُلبسان تاج الكرامة ويرفعان في الدرجات.", "القرآن يشفع لصاحبه يوم القيامة: «اقرأ وارقَ وارتقِ فإن منزلتك عند آخر آية تقرؤها».", "تعلم سورة البقرة بالتدريج: تلاوة → فهم → حفظ → تطبيق. ينبغي أن يكون لكل مسلم مصحف في البيت يقرأه ولا يتركه للزينة.", "اليقين (yaqeen) هو الإيمان الذي يطمئن فيه القلب، وهو أعلى من مجرد التصديق (tasdeeq)."], "sources": ["surat_albaqarah_fadl.txt", "surah_baqarah_change_life.txt"], "connections": ["learning", "tazkiyah"]}, {"id": "automation", "name": "Automation & CI/CD", "emoji": "⚙️", "color": "#607D8B", "summary": "Automating repetitive tasks, deployments, and self-improvement loops for maximum efficiency.", "knowledge": ["Three must-build automations: (1) signup test automation, (2) watchdog/monitoring for production systems, (3) self-improvement loop agent.", "Automatic CI/CD from Git push: Coolify auto-deploys when you push to your repository — no manual steps.", "Self-improvement loop agent (Grace) automatically ships ~3 fixes/day by running tests, identifying issues, and creating PRs.", "Cron Jobs in Hermes Agent automate recurring tasks: competitor research, daily briefings, social media posting.", "The Hermes Kanban system with a Resolver agent automatically reviews and critiques tasks in the workflow.", "Skillification: turning any multi-step workflow into a reusable Hermes skill for one-command execution.", "Automation compounds: each automated task frees time that can be invested in building more automation."], "sources": ["managing_ai_agents.md", "coolify_vercel.md", "7_hermes_uses.md"], "connections": ["multi-agent", "hermes-agent", "ci-cd"]}, {"id": "productivity", "name": "Productivity Systems", "emoji": "⚡", "color": "#9C27B0", "summary": "Evidence-based productivity frameworks focusing on systems, environment design, and cognitive load management.", "knowledge": ["Dr. Justin Sung's 4-part productivity system: Intention → Environment → Process → Review.", "Systems over willpower: design your environment and processes so the productive path is the path of least resistance.", "Environment design: reduce friction for good habits (keep tools visible/accessible) and increase friction for bad ones.", "Process engineering: match your energy patterns to task types — creative work when energy is high, administrative when low.", "Cognitive load reduction: break complex tasks into smaller chunks, use checklists, and eliminate decision fatigue.", "Habit stacking: attach new habits to existing ones ('After I [existing habit], I will [new habit]').", "Review and adaptation cycle: weekly reviews to assess what worked, what didn't, and adjust the system accordingly."], "sources": ["productivity_systems.md", "7_hermes_uses.md"], "connections": ["second-brain", "hermes-agent"]}, {"id": "docker", "name": "Docker", "emoji": "??", "color": "#90A4AE", "summary": "Container platform for deploying applications consistently across environments.", "knowledge": ["Docker packages applications with their dependencies into containers that run identically on any Linux server.", "Coolify uses Docker Compose to define and deploy multi-service applications.", "Docker on a $5 VPS is sufficient for hosting multiple production applications."], "sources": ["coolify_vercel.md"], "connections": []}, {"id": "conversion", "name": "Conversion Optimization", "emoji": "??", "color": "#90A4AE", "summary": "Strategies for increasing the percentage of users who complete a desired action.", "knowledge": ["Install-to-paid conversion optimization: multi-step paywalls (20-40% uplift), discount gamification, social proof.", "Trial toggles for different user intents: feature explorers want open access; committed buyers want structured trials.", "Conversion Rate Optimization (CRO) is about removing friction and building trust at each step."], "sources": ["paywall_50m.md"], "connections": []}]};
+const concepts = data.concepts;
 
-let scale = 1;
-let panX = 0, panY = 0;
-let isDragging = false, startX, startY;
-let layoutMode = 0; // 0: radial, 1: tree-right, 2: tree-down
+// Stats
+document.getElementById('conceptCount').textContent = concepts.length;
+const allSources = new Set();
+let totalInsights = 0;
+concepts.forEach(c => {
+  c.sources.forEach(s => allSources.add(s));
+  totalInsights += c.knowledge.length;
+});
+document.getElementById('sourceCount').textContent = allSources.size;
+document.getElementById('insightCount').textContent = totalInsights;
 
-const canvas = document.getElementById('canvas');
-const sidebar = document.getElementById('sidebar');
+const grid = document.getElementById('grid');
 
-const catColors = {
-  'AI & Agents': '#2196F3',
-  'Productivity': '#9C27B0',
-  'Marketing & SaaS': '#FF9800',
-  'Quran': '#4CAF50'
-};
-
-// ---- LAYOUT ALGORITHMS ----
-
-function getRadialPos(angle, radius) {
-  return {
-    x: window.innerWidth/2 + Math.cos(angle) * radius,
-    y: window.innerHeight/2 + Math.sin(angle) * radius
-  };
+// Color helpers
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function getTreeRightPos(depth, index, totalInLevel) {
-  const startX = 80;
-  const startY = window.innerHeight/2;
-  const xSpacing = 260;
-  const ySpacing = 50;
-  return {
-    x: startX + depth * xSpacing,
-    y: startY + (index - (totalInLevel-1)/2) * ySpacing
-  };
-}
+function renderCards(filter) {
+  grid.innerHTML = '';
+  const q = (filter || '').toLowerCase();
+  let visible = 0;
 
-function getTreeDownPos(depth, index, totalInLevel) {
-  const startX = window.innerWidth/2;
-  const startY = 60;
-  const xSpacing = 180;
-  const ySpacing = 90;
-  return {
-    x: startX + (index - (totalInLevel-1)/2) * xSpacing,
-    y: startY + depth * ySpacing
-  };
-}
-
-function layout(node, depth, angleStart, angleEnd, parentPos, result) {
-  if (!node) return;
-  
-  const id = node.name;
-  const cx = window.innerWidth/2;
-  const cy = window.innerHeight/2;
-  
-  let pos;
-  
-  if (depth === 0) {
-    // Center
-    pos = { x: cx, y: cy };
-  } else if (layoutMode === 0) {
-    // Radial layout
-    const midAngle = (angleStart + angleEnd) / 2;
-    const radius = 80 + depth * 160;
-    pos = getRadialPos(midAngle, radius);
-  } else if (layoutMode === 1) {
-    // Tree right
-    const total = node.children ? node.children.length : 1;
-    pos = getTreeRightPos(depth, 0, 1);
-  } else {
-    // Tree down
-    const total = node.children ? node.children.length : 1;
-    pos = getTreeDownPos(depth, 0, 1);
-  }
-  
-  result.push({
-    id: id,
-    node: node,
-    x: pos.x,
-    y: pos.y,
-    depth: depth,
-    parentPos: parentPos,
-    type: depth === 0 ? 'center' : 
-          depth === 1 ? 'category' : 
-          node.leaf ? 'leaf' : 'file'
-  });
-  
-  if (node.children) {
-    const count = node.children.length;
-    if (layoutMode === 0) {
-      const range = angleEnd - angleStart;
-      const padding = 0.15 * range / count;
-      const step = (range - 2 * padding) / Math.max(count, 1);
-      node.children.forEach((child, i) => {
-        const childStart = angleStart + padding + i * step;
-        const childEnd = childStart + step * 0.8;
-        layout(child, depth + 1, childStart, childEnd, pos, result);
-      });
-    } else if (layoutMode === 1) {
-      const totalInLevel = count;
-      node.children.forEach((child, i) => {
-        const p = getTreeRightPos(depth + 1, i, totalInLevel);
-        result.push({
-          id: child.name,
-          node: child,
-          x: p.x + (parentPos ? parentPos.x - p.x : -260),
-          y: p.y,
-          depth: depth + 1,
-          parentPos: pos,
-          type: depth === 0 ? 'category' : child.leaf ? 'leaf' : 'file'
-        });
-        if (child.children) {
-          child.children.forEach((gc, j) => {
-            const gp = getTreeRightPos(depth + 2, j, child.children.length);
-            result.push({
-              id: gc.name,
-              node: gc,
-              x: gp.x + (p.x - gp.x),
-              y: gp.y,
-              depth: depth + 2,
-              parentPos: { x: p.x, y: p.y },
-              type: 'leaf'
-            });
-          });
-        }
-      });
-    } else {
-      node.children.forEach((child, i) => {
-        const p = getTreeDownPos(depth + 1, i, count);
-        result.push({
-          id: child.name,
-          node: child,
-          x: p.x,
-          y: p.y + (parentPos ? parentPos.y - p.y : -90),
-          depth: depth + 1,
-          parentPos: pos,
-          type: child.leaf ? 'leaf' : 'file'
-        });
-        if (child.children) {
-          child.children.forEach((gc, j) => {
-            const gp = getTreeDownPos(depth + 2, j, child.children.length);
-            result.push({
-              id: gc.name,
-              node: gc,
-              x: gp.x,
-              y: gp.y + (p.y - gp.y),
-              depth: depth + 2,
-              parentPos: { x: p.x, y: p.y },
-              type: 'leaf'
-            });
-          });
-        }
-      });
+  concepts.forEach(c => {
+    // Check if matches filter
+    if (q) {
+      const nameMatch = c.name.toLowerCase().includes(q);
+      const insightMatch = c.knowledge.some(k => k.toLowerCase().includes(q));
+      const sourceMatch = c.sources.some(s => s.toLowerCase().includes(q));
+      const summaryMatch = c.summary.toLowerCase().includes(q);
+      if (!nameMatch && !insightMatch && !sourceMatch && !summaryMatch) return;
     }
-  }
-}
+    visible++;
 
-function render() {
-  canvas.innerHTML = '';
-  
-  const nodes = [];
-  layout(data, 0, -Math.PI, Math.PI, null, nodes);
-  
-  // Filter out duplicates (nested layout adds children separately)
-  const unique = {};
-  nodes.forEach(n => { unique[n.id] = n; });
-  const allNodes = Object.values(unique);
-  
-  // Draw lines first
-  allNodes.forEach(n => {
-    if (n.parentPos) {
-      const line = document.createElement('div');
-      line.className = 'mm-line';
-      
-      const x1 = n.x, y1 = n.y;
-      const x2 = n.parentPos.x, y2 = n.parentPos.y;
-      const dx = x2 - x1, dy = y2 - y1;
-      const len = Math.sqrt(dx*dx + dy*dy);
-      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-      
-      line.style.cssText = `
-        width: ${len}px;
-        height: 2px;
-        left: ${x1}px;
-        top: ${y1 - 1}px;
-        transform: rotate(${angle}deg);
-        transform-origin: 0 50%;
-        background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,${0.06 + n.depth * 0.03}));
-      `;
-      canvas.appendChild(line);
-    }
-  });
-  
-  // Draw nodes
-  allNodes.forEach(n => {
-    const el = document.createElement('div');
-    el.className = 'mm-node ' + n.type;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.setProperty('--card-color', c.color);
     
-    let bgColor, borderColor, textColor;
+    const bgIcon = hexToRgba(c.color, 0.12);
+    const iconBorder = hexToRgba(c.color, 0.2);
     
-    if (n.type === 'center') {
-      bgColor = 'rgba(255,215,0,0.12)';
-      borderColor = 'rgba(255,215,0,0.3)';
-      textColor = '#FFD700';
-    } else if (n.type === 'category') {
-      bgColor = n.node.color + '22';
-      borderColor = n.node.color + '44';
-      textColor = n.node.color;
-    } else if (n.type === 'file') {
-      bgColor = n.node.color + '18';
-      borderColor = n.node.color + '33';
-      textColor = '#ccc';
-    } else {
-      bgColor = 'rgba(255,255,255,0.03)';
-      borderColor = 'rgba(255,255,255,0.08)';
-      textColor = '#888';
-    }
-    
-    el.style.cssText = `
-      left: ${n.x}px; top: ${n.y}px;
-      background: ${bgColor};
-      border-color: ${borderColor};
-      color: ${textColor};
-      transform: translate(-50%, -50%) scale(1);
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-icon" style="background:${bgIcon}">
+          ${c.emoji}
+        </div>
+        <div class="card-name" style="color:${c.color}">${c.name}</div>
+      </div>
+      <div class="card-summary">${c.summary}</div>
+      <div class="card-sources">
+        ${c.sources.slice(0, 4).map(s => `<span class="card-source">${s}</span>`).join('')}
+        ${c.sources.length > 4 ? `<span class="card-source">+${c.sources.length - 4}</span>` : ''}
+      </div>
+      <div class="card-connections">
+        ${c.connections.slice(0, 4).map(conn => {
+          const found = concepts.find(cc => cc.id === conn);
+          return found ? `<span class="card-conn">${found.emoji} ${found.name}</span>` : '';
+        }).join('')}
+      </div>
     `;
     
-    const emoji = n.node.emoji ? '<span class="emoji">' + n.node.emoji + '</span> ' : '';
-    el.innerHTML = emoji + n.node.name;
-    
-    // Click to show sidebar
-    if (n.type !== 'center' && n.type !== 'leaf') {
-      el.style.cursor = 'pointer';
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showSidebar(n.node, n.type);
-      });
-    }
-    
-    el.addEventListener('mouseenter', function() {
-      if (!isDragging) {
-        this.style.transform = 'translate(-50%, -50%) scale(1.08)';
-        this.style.zIndex = '10';
-      }
-    });
-    el.addEventListener('mouseleave', function() {
-      this.style.transform = 'translate(-50%, -50%) scale(1)';
-      this.style.zIndex = '1';
-    });
-    
-    canvas.appendChild(el);
+    card.addEventListener('click', () => openDetail(c));
+    grid.appendChild(card);
   });
   
-  applyTransform();
+  if (visible === 0) {
+    grid.innerHTML = '<div class="empty-state">No concepts match your search ??</div>';
+  }
 }
 
-function showSidebar(node, type) {
-  document.getElementById('sbTitle').textContent = (node.emoji || '') + ' ' + node.name;
-  document.getElementById('sbSub').textContent = type === 'category' ? 'Category' : 'File';
-  document.getElementById('sbSummary').textContent = node.summary || '';
+function filterCards(value) {
+  renderCards(value);
+}
+
+function openDetail(c) {
+  const panel = document.getElementById('detailPanel');
+  const color = c.color;
   
-  const linkArea = document.getElementById('sbLinkArea');
-  if (node.link) {
-    linkArea.innerHTML = '<a class="sb-link" href="' + node.link + '" target="_blank">↗ Open in Google Drive</a>';
-  } else {
-    linkArea.innerHTML = '';
-  }
+  panel.style.setProperty('--dp-color', color);
   
-  sidebar.classList.add('open');
+  document.getElementById('dpIcon').style.cssText = `background:${hexToRgba(color, 0.12)};`;
+  document.getElementById('dpIcon').textContent = c.emoji;
+  document.getElementById('dpTitle').textContent = c.name;
+  document.getElementById('dpTitle').style.color = color;
+  document.getElementById('dpSummary').textContent = c.summary;
+  
+  // Knowledge items
+  const kList = document.getElementById('dpKnowledge');
+  kList.innerHTML = c.knowledge.map(k => `<li>${k}</li>`).join('');
+  
+  // Sources
+  document.getElementById('dpSources').innerHTML = c.sources.map(s => `<span class="dp-source">${s}</span>`).join('');
+  
+  // Connections
+  const connEl = document.getElementById('dpConnections');
+  const conns = c.connections.map(connId => {
+    const found = concepts.find(cc => cc.id === connId);
+    if (!found) return '';
+    return `<span class="dp-connection" onclick="event.stopPropagation(); closeDetail(); openDetailByName('${connId}')">${found.emoji} ${found.name}</span>`;
+  }).filter(Boolean).join('');
+  connEl.innerHTML = conns || '<span style="color:#555;font-size:12px;">No direct connections</span>';
+  
+  document.getElementById('detailOverlay').classList.add('open');
+  panel.classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
-function closeSidebar() {
-  sidebar.classList.remove('open');
+function openDetailByName(id) {
+  const c = concepts.find(cc => cc.id === id);
+  if (c) openDetail(c);
 }
 
-function zoomIn() {
-  scale = Math.min(scale * 1.25, 3);
-  applyTransform();
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+  document.getElementById('detailPanel').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
-function zoomOut() {
-  scale = Math.max(scale / 1.25, 0.2);
-  applyTransform();
-}
-
-function applyTransform() {
-  canvas.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + scale + ')';
-  document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
-}
-
-function resetView() {
-  scale = 1;
-  panX = 0;
-  panY = 0;
-  applyTransform();
-}
-
-function toggleLayout() {
-  layoutMode = (layoutMode + 1) % 3;
-  render();
-}
-
-// Canvas pan via drag
-canvas.addEventListener('mousedown', (e) => {
-  if (e.target === canvas || e.target.classList.contains('mm-line')) {
-    isDragging = true;
-    startX = e.clientX - panX;
-    startY = e.clientY - panY;
-  }
-});
-window.addEventListener('mousemove', (e) => {
-  if (isDragging) {
-    panX = e.clientX - startX;
-    panY = e.clientY - startY;
-    applyTransform();
-  }
-});
-window.addEventListener('mouseup', () => { isDragging = false; });
-
-// Touch support
-let touchStartX, touchStartY, touchDist = 0;
-canvas.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1) {
-    touchStartX = e.touches[0].clientX - panX;
-    touchStartY = e.touches[0].clientY - panY;
-  } else if (e.touches.length === 2) {
-    touchDist = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
-  }
-});
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  if (e.touches.length === 1) {
-    panX = e.touches[0].clientX - touchStartX;
-    panY = e.touches[0].clientY - touchStartY;
-    applyTransform();
-  } else if (e.touches.length === 2) {
-    const newDist = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
-    scale *= newDist / touchDist;
-    touchDist = newDist;
-    applyTransform();
-  }
-}, { passive: false });
-
-// Mouse wheel zoom
-canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const delta = e.deltaY > 0 ? 0.9 : 1.1;
-  scale = Math.max(0.2, Math.min(3, scale * delta));
-  applyTransform();
-}, { passive: false });
-
-// Keyboard shortcuts
+// Keyboard
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'r' || e.key === 'R') resetView();
-  if (e.key === 'l' || e.key === 'L') toggleLayout();
-  if (e.key === 'Escape') closeSidebar();
+  if (e.key === 'Escape') closeDetail();
 });
-
-// Resize handler
-window.addEventListener('resize', () => { render(); });
 
 // Init
-render();
+renderCards();
 </script>
 </body>
 </html>
