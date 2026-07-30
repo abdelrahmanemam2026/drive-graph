@@ -3,385 +3,569 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Knowledge Graph — Interactive Learning</title>
+<title>Knowledge Mind Map</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#0a0a14; color:#e0e0e0; font-family:'Inter',sans-serif; overflow:hidden; height:100vh; }
-  #app { display:flex; height:100vh; }
-  #graph { flex:1; height:100vh; position:relative; }
-  #graph svg { width:100%; height:100%; }
-  .top-bar {
-    position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:100;
-    background:rgba(10,10,20,0.92); backdrop-filter:blur(16px);
-    border:1px solid rgba(255,255,255,0.06); border-radius:14px;
-    padding:10px 20px; display:flex; gap:12px; align-items:center;
-    font-size:13px; box-shadow:0 4px 30px rgba(0,0,0,0.5);
+  body { 
+    background: #0a0a14; color: #e0e0e0; 
+    font-family: 'Segoe UI', system-ui, sans-serif; 
+    overflow: hidden; height: 100vh;
+    cursor: grab;
   }
-  .top-bar .logo { font-weight:700; color:#FFD700; font-size:14px; }
-  .top-bar .sep { color:#333; }
-  .top-bar .stats { color:#666; font-size:11px; }
-  .top-bar input {
-    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
-    color:#eee; padding:6px 12px; border-radius:8px; outline:none;
-    width:180px; font-size:12px; transition:border .2s;
+  body:active { cursor: grabbing; }
+  
+  #canvas {
+    width: 100vw; height: 100vh;
+    position: relative;
+    transform-origin: 0 0;
   }
-  .top-bar input:focus { border-color:#FFD700; }
-  .top-bar input::placeholder { color:#555; }
-  .top-bar button {
-    background:rgba(255,255,255,0.06); color:#ccc; border:1px solid rgba(255,255,255,0.1);
-    padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; transition:all .2s;
+  
+  .mm-node {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    user-select: none;
+    border: 1px solid rgba(255,255,255,0.06);
+    z-index: 1;
   }
-  .top-bar button:hover { background:rgba(255,255,255,0.12); color:#fff; }
-  .filters {
-    position:fixed; left:50%; top:72px; transform:translateX(-50%); z-index:99;
-    display:flex; gap:6px; flex-wrap:wrap; justify-content:center;
+  .mm-node:hover {
+    transform: scale(1.05);
+    z-index: 10;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   }
-  .filters button {
-    padding:4px 12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);
-    background:transparent; color:#888; font-size:11px; cursor:pointer;
-    transition:all .2s; font-family:inherit;
+  .mm-node.center {
+    font-size: 20px;
+    font-weight: 700;
+    padding: 14px 28px;
+    border-radius: 16px;
+    border: 2px solid rgba(255,215,0,0.3);
+    box-shadow: 0 0 40px rgba(255,215,0,0.1);
+    z-index: 100;
   }
-  .filters button:hover { background:rgba(255,255,255,0.05); color:#ccc; }
-  .filters button.active { background:rgba(255,255,255,0.1); color:#fff; border-color:rgba(255,255,255,0.2); font-weight:600; }
-  .filters button .dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px; vertical-align:middle; }
-  #sidebar {
-    position:fixed; right:-420px; top:0; width:380px; height:100vh;
-    background:rgba(16,16,30,0.97); backdrop-filter:blur(20px);
-    border-left:1px solid rgba(255,255,255,0.06);
-    z-index:200; transition:right .35s cubic-bezier(0.4,0,0.2,1);
-    padding:28px 24px; overflow-y:auto; box-shadow:-10px 0 40px rgba(0,0,0,0.4);
+  .mm-node.category {
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 12px;
+    border-width: 1.5px;
   }
-  #sidebar.open { right:0; }
-  #sidebar .close-btn {
-    position:absolute; top:16px; right:16px; width:32px; height:32px;
-    border-radius:50%; border:none; background:rgba(255,255,255,0.06);
-    color:#888; cursor:pointer; font-size:18px; display:flex;
-    align-items:center; justify-content:center; transition:all .2s;
+  .mm-node.file {
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  #sidebar .close-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
-  #sidebar .sb-type { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#666; margin-bottom:6px; }
-  #sidebar .sb-title { font-size:18px; font-weight:600; color:#fff; margin-bottom:8px; line-height:1.3; }
-  #sidebar .sb-category { font-size:12px; color:#888; margin-bottom:16px; }
-  #sidebar .sb-summary { font-size:14px; line-height:1.6; color:#bbb; margin-bottom:20px; padding:14px 16px; background:rgba(255,255,255,0.03); border-radius:10px; border-left:3px solid #FFD700; }
-  #sidebar .sb-section { font-size:12px; font-weight:600; color:#999; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; margin-top:16px; }
-  #sidebar .sb-topics { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
-  #sidebar .sb-topic {
-    padding:4px 12px; background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.15);
-    border-radius:20px; font-size:12px; color:#FFD700; cursor:pointer; transition:all .2s;
+  .mm-node.leaf {
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    opacity: 0.75;
+    border-style: dashed;
   }
-  #sidebar .sb-topic:hover { background:rgba(255,215,0,0.15); }
-  #sidebar .sb-drive {
-    display:inline-flex; align-items:center; gap:6px;
-    padding:8px 16px; background:rgba(255,255,255,0.06); border-radius:8px;
-    color:#ccc; text-decoration:none; font-size:13px; margin-top:4px; transition:all .2s;
+  .mm-node .emoji { font-size: 1.2em; }
+  
+  /* Lines between nodes */
+  .mm-line {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
   }
-  #sidebar .sb-drive:hover { background:rgba(255,255,255,0.1); color:#fff; }
-  #sidebar .sb-related-item {
-    padding:8px 12px; background:rgba(255,255,255,0.03); border-radius:8px;
-    margin-bottom:4px; font-size:12px; color:#999; cursor:pointer; transition:all .2s;
+  
+  /* Controls */
+  .controls {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    gap: 10px;
+    align-items: center;
   }
-  #sidebar .sb-related-item:hover { background:rgba(255,255,255,0.06); color:#ccc; }
-  .legend {
-    position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
-    background:rgba(10,10,20,0.85); backdrop-filter:blur(8px);
-    padding:6px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);
-    font-size:11px; color:#555; z-index:50;
+  .controls button {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #ccc;
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
   }
-  .legend span { display:inline-flex; align-items:center; gap:4px; margin:0 6px; }
-  .legend .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
-  #sidebar::-webkit-scrollbar { width:4px; }
-  #sidebar::-webkit-scrollbar-track { background:transparent; }
-  #sidebar::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
-  @media (max-width:768px) {
-    #sidebar { width:100vw; right:-100vw; }
-    .top-bar { flex-wrap:wrap; padding:8px 12px; width:95%; font-size:11px; top:10px; }
-    .top-bar input { width:120px; }
-    .filters { top:62px; }
+  .controls button:hover {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
   }
+  .controls .zoom-level {
+    color: #555;
+    font-size: 12px;
+    min-width: 40px;
+    text-align: center;
+  }
+  
+  /* Sidebar */
+  .sidebar {
+    position: fixed;
+    right: -400px;
+    top: 0;
+    width: 360px;
+    height: 100vh;
+    background: rgba(16,16,30,0.97);
+    backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(255,255,255,0.06);
+    z-index: 2000;
+    transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+    padding: 28px 24px;
+    overflow-y: auto;
+  }
+  .sidebar.open { right: 0; }
+  .sidebar .close-sb {
+    position: absolute;
+    top: 16px; right: 16px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.06);
+    color: #888;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sidebar .close-sb:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .sidebar .sb-title {
+    font-size: 18px; font-weight: 600; color: #fff;
+    margin-bottom: 6px; padding-right: 30px;
+  }
+  .sidebar .sb-sub {
+    font-size: 12px; color: #888; margin-bottom: 14px;
+  }
+  .sidebar .sb-summary {
+    font-size: 13px; line-height: 1.6; color: #bbb;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    border-left: 3px solid #FFD700;
+    margin-bottom: 16px;
+  }
+  .sidebar .sb-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+    color: #ccc;
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .sidebar .sb-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 </style>
 </head>
 <body>
-<div id="app"><div id="graph"></div></div>
 
-<div class="top-bar">
-  <span class="logo">&#129504; Knowledge Graph</span>
-  <span class="sep">|</span>
-  <span class="stats" id="stats">14 files &middot; 75 concepts &middot; 11 bridges</span>
-  <input id="search" type="text" placeholder="Search files or topics..." oninput="filterGraph(this.value)">
-  <button onclick="resetView()">&#8635; Reset</button>
+<div id="canvas"></div>
+
+<div class="controls">
+  <button onclick="zoomIn()">+</button>
+  <span class="zoom-level" id="zoomLevel">100%</span>
+  <button onclick="zoomOut()">−</button>
+  <button onclick="resetView()">⟲ Fit</button>
+  <button onclick="toggleLayout()">↻ Layout</button>
 </div>
 
-<div class="filters" id="filters">
-  <button class="active" onclick="filterCategory('all')" data-cat="all">&#9776; All</button>
-  <button onclick="filterCategory('ai')" data-cat="ai"><span class="dot" style="background:#2196F3"></span>AI</button>
-  <button onclick="filterCategory('productivity')" data-cat="productivity"><span class="dot" style="background:#9C27B0"></span>Productivity</button>
-  <button onclick="filterCategory('marketing')" data-cat="marketing"><span class="dot" style="background:#FF9800"></span>Marketing</button>
-  <button onclick="filterCategory('Quran')" data-cat="Quran"><span class="dot" style="background:#4CAF50"></span>Quran</button>
-  <button onclick="filterCategory('shared')" data-cat="shared"><span class="dot" style="background:#FFD700"></span>Bridging Topics</button>
+<div class="sidebar" id="sidebar">
+  <button class="close-sb" onclick="closeSidebar()">✕</button>
+  <div class="sb-title" id="sbTitle"></div>
+  <div class="sb-sub" id="sbSub"></div>
+  <div class="sb-summary" id="sbSummary"></div>
+  <div id="sbLinkArea"></div>
 </div>
 
-<div id="sidebar">
-  <button class="close-btn" onclick="closeSidebar()">&#10005;</button>
-  <div class="sb-type" id="sb-type"></div>
-  <div class="sb-title" id="sb-title"></div>
-  <div class="sb-category" id="sb-category"></div>
-  <div id="sb-summary" class="sb-summary"></div>
-  <div id="sb-topics-section" style="display:none;">
-    <div class="sb-section">&#128204; Key Topics</div>
-    <div class="sb-topics" id="sb-topics"></div>
-  </div>
-  <div id="sb-files-section" style="display:none;">
-    <div class="sb-section">&#128196; Related Files</div>
-    <div id="sb-files"></div>
-  </div>
-  <div id="sb-related-section" style="display:none;">
-    <div class="sb-section">&#128279; Connected Files</div>
-    <div id="sb-related"></div>
-  </div>
-  <div id="sb-drive-section" style="display:none;">
-    <a id="sb-drive" class="sb-drive" target="_blank">&#8599; Open in Google Drive</a>
-  </div>
-</div>
-
-<div class="legend">
-  <span><span class="dot" style="background:#2196F3"></span> AI</span>
-  <span><span class="dot" style="background:#9C27B0"></span> Productivity</span>
-  <span><span class="dot" style="background:#FF9800"></span> Marketing</span>
-  <span><span class="dot" style="background:#4CAF50"></span> Quran</span>
-  <span><span class="dot" style="background:#FFD700"></span> Bridging Topic</span>
-  <span>| &#128073; Click any node &middot; Hover to highlight</span>
-</div>
-
-<script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
-const data = {"nodes": [{"id": "productivity_systems", "label": "productivity_systems.md", "fullName": "productivity_systems.md", "type": "file", "category": "productivity", "color": "#9C27B0", "r": 14, "emoji": "\u26a1", "summary": "Dr. Justin Sung's 4-part productivity system (intention, environment, process, review) makes productive behavior the default path of least resistance instead of relying on willpower.", "driveUrl": "https://drive.google.com/file/d/1G_4j5qZ5pI8AFLQajUJArOdqnQWdBJOR/view", "topics": ["Productivity Systems", "Systems over willpower", "Environment design", "Process engineering", "Cognitive load reduction", "Self-regulated learning"]}, {"id": "7_hermes_uses", "label": "7_hermes_uses.md", "fullName": "7_hermes_uses.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83e\udd16", "summary": "Seven real-world Hermes Agent use cases including competitor research, personal wikis, video creation, daily briefings, remote computer control, and turning workflows into reusable skills.", "driveUrl": "https://drive.google.com/file/d/1JQq0t7iJQXwKlwM_9xYxdsepKRuGRRJO/view", "topics": ["Hermes Agent", "Cron Jobs", "AI Kanban", "Obsidian Integration", "Second Brain", "Task Management", "Tailscale", "Video Creation", "Skillification"]}, {"id": "obsidian_hermes", "label": "obsidian_hermes.md", "fullName": "obsidian_hermes.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83e\udde0", "summary": "Connecting Hermes Agent to Obsidian creates a persistent long-term memory system where AI agents read, write, and link notes in your knowledge vault.", "driveUrl": "https://drive.google.com/file/d/1ZpxWtSKOYDwygHV9lI12B089Xm3Ofuuv/view", "topics": ["Obsidian Integration", "Second Brain", "Long-term Memory", "Hermes Agent", "Knowledge Management", "Markdown"]}, {"id": "coolify_vercel", "label": "coolify_vercel.md", "fullName": "coolify_vercel.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83d\ude80", "summary": "Step-by-step tutorial for self-hosting Coolify (open-source Vercel alternative) on a $5 VPS to deploy Next.js apps with automatic CI/CD, databases, and SSL.", "driveUrl": "https://drive.google.com/file/d/1Mp6uGod7iMuaSGJbw34zuAX1JG73QiSi/view", "topics": ["Self-hosting", "Coolify", "Docker", "CI/CD", "PostgreSQL", "SSL", "VPS"]}, {"id": "paywall_50m", "label": "paywall_50m.md", "fullName": "paywall_50m.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83d\udcb0", "summary": "Deep dive into paywall strategies and pricing psychology that generated over $50M in revenue, treating the paywall as a revenue engine rather than a UI element.", "driveUrl": "https://drive.google.com/file/d/1CO2Jee1D-YNE-9sGZkPxtcplXw31n4T2/view", "topics": ["Paywall", "Monetization", "Pricing", "Conversion Optimization", "Gamification", "Free Trial"]}, {"id": "hermes_work_graph", "label": "hermes_work_graph.md", "fullName": "hermes_work_graph.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83d\udd17", "summary": "Arabic: Hermes Work + Graph Engineer for turning scattered notes into organized Knowledge Graph (Second Brain).", "driveUrl": "https://drive.google.com/file/d/1l499k9vSFEfXR9-qc-hdphWAP-VuUw4O/view", "topics": ["Knowledge Graph", "Hermes Work", "Graph Engineer", "Second Brain", "Knowledge Organization"]}, {"id": "odysseus_vs_hermes", "label": "odysseus_vs_hermes.md", "fullName": "odysseus_vs_hermes.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\u2694\ufe0f", "summary": "Arabic: Comprehensive comparison between Odysseus and Hermes Agent to help users choose based on technical expertise and project needs.", "driveUrl": "https://drive.google.com/file/d/16sFiMQsVaiiiu3BJ7nGK1oDeQuQlcRWy/view", "topics": ["Hermes Agent", "Odysseus", "Multi-agent", "Self-hosting", "Skills System", "Orchestration"]}, {"id": "ai_content_studio", "label": "ai_content_studio.md", "fullName": "ai_content_studio.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83c\udfac", "summary": "Building a fully autonomous content studio with 5 specialized Hermes agents on a $5 VPS controlled via Telegram.", "driveUrl": "https://drive.google.com/file/d/1k5VbclAIROpUiYzsV7V54sbfI_acpWV0/view", "topics": ["Multi-agent", "Autonomous Studio", "Telegram", "Tailscale", "API Integration", "JSON", "VPS"]}, {"id": "managing_ai_agents", "label": "managing_ai_agents.md", "fullName": "managing_ai_agents.md", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\ud83c\udfc6", "summary": "Managing AI agents is the most valuable skill of 2026, featuring Ryan Carson's system for shipping 22-40 PRs daily as a team of one.", "driveUrl": "https://drive.google.com/file/d/1Zi93ODou57S32hRUoWq3m9P1QDEIhC64/view", "topics": ["Multi-agent", "AI Agents 2026", "Cloud VM", "Model Routing", "Cost Optimization", "Self-improvement", "Automation"]}, {"id": "hermes_config", "label": "hermes_config.txt", "fullName": "hermes_config.txt", "type": "file", "category": "ai", "color": "#2196F3", "r": 14, "emoji": "\u2699\ufe0f", "summary": "How to optimize Hermes Agent by configuring context management, file limits, memory, sub-agents, cost optimization, and compression.", "driveUrl": "https://drive.google.com/document/d/1M4u5tpNh05-8RpftztBd8v5RsNWK7XzapR0PMrZXqok/edit", "topics": ["Hermes Agent", "Configuration", "Context Management", "Sub-agents", "Cost Optimization", "YOLO Mode"]}, {"id": "payment_gateways_saas", "label": "payment_gateways_saas.md", "fullName": "payment_gateways_saas.md", "type": "file", "category": "marketing", "color": "#FF9800", "r": 14, "emoji": "\ud83d\udcb3", "summary": "Arabic: Comparison of 13 payment gateways for individual founders in MENA including Stripe, Paddle, PayMob for global and local SaaS payments.", "driveUrl": "https://drive.google.com/file/d/1ivgR_oWyHsoXDH0OjW6gg27qCHFA7UFi/view", "topics": ["Payment Gateways", "SaaS", "Stripe", "Merchant of Record", "MENA Payments", "Crypto", "Risk Management"]}, {"id": "cold_email_saas", "label": "cold_email_saas.txt", "fullName": "cold_email_saas.txt", "type": "file", "category": "marketing", "color": "#FF9800", "r": 14, "emoji": "\ud83d\udce7", "summary": "Cold email scripts for SaaS: 7 steps, AIDA/BANT frameworks, 10 templates, deliverability best practices with domain warming.", "driveUrl": "https://drive.google.com/file/d/1ed6zEFXkO2AB27FX9PgT8H1sZU_ztkUg/view", "topics": ["Cold Email", "SaaS", "AIDA", "Email Deliverability", "Lead Generation", "Sales Funnel"]}, {"id": "surat_albaqarah_fadl", "label": "surat_albaqarah_fadl.txt", "fullName": "surat_albaqarah_fadl.txt", "type": "file", "category": "Quran", "color": "#4CAF50", "r": 14, "emoji": "\ud83d\udcd6", "summary": "Arabic: Virtues of Surah Al-Baqarah based on hadith - blessings, protection, and honor for its companion on Judgment Day.", "driveUrl": "https://drive.google.com/file/d/1l3WGTdKRrJF0DrY7ZeL1-GglnufOvtK2/view", "topics": ["Surah Al-Baqarah", "Quran", "Blessings", "Intercession", "Learning Stages", "Tazkiyah"]}, {"id": "surah_baqarah_change_life", "label": "surah_baqarah_change_life.txt", "fullName": "surah_baqarah_change_life.txt", "type": "file", "category": "Quran", "color": "#4CAF50", "r": 14, "emoji": "\ud83d\udd4c", "summary": "Arabic/English: Sheikh Mohamed El-Ghalith lecture on learning Surah Al-Baqarah gradually and what awaits its people in Paradise.", "driveUrl": "https://drive.google.com/file/d/1qE7AiAm90lA-7YFfbosEzqBTRQq34xfb/view", "topics": ["Surah Al-Baqarah", "Quran", "Yaqeen", "Paradise", "Parents", "Gradual Learning"]}, {"id": "productivity_systems", "label": "Productivity Systems", "fullName": "Productivity Systems", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "systems_over_willpower", "label": "Systems over willpower", "fullName": "Systems over willpower", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "environment_design", "label": "Environment design", "fullName": "Environment design", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "process_engineering", "label": "Process engineering", "fullName": "Process engineering", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "cognitive_load_reduction", "label": "Cognitive load reduction", "fullName": "Cognitive load reduction", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "self_regulated_learning", "label": "Self-regulated learning", "fullName": "Self-regulated learning", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["productivity_systems"]}, {"id": "hermes_agent", "label": "Hermes Agent", "fullName": "Hermes Agent", "type": "topic", "shared": true, "color": "#FFD700", "r": 18, "count": 4, "files": ["7_hermes_uses", "obsidian_hermes", "odysseus_vs_hermes", "hermes_config"]}, {"id": "cron_jobs", "label": "Cron Jobs", "fullName": "Cron Jobs", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["7_hermes_uses"]}, {"id": "ai_kanban", "label": "AI Kanban", "fullName": "AI Kanban", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["7_hermes_uses"]}, {"id": "obsidian_integration", "label": "Obsidian Integration", "fullName": "Obsidian Integration", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["7_hermes_uses", "obsidian_hermes"]}, {"id": "second_brain", "label": "Second Brain", "fullName": "Second Brain", "type": "topic", "shared": true, "color": "#FFD700", "r": 15, "count": 3, "files": ["7_hermes_uses", "obsidian_hermes", "hermes_work_graph"]}, {"id": "task_management", "label": "Task Management", "fullName": "Task Management", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["7_hermes_uses"]}, {"id": "tailscale", "label": "Tailscale", "fullName": "Tailscale", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["7_hermes_uses", "ai_content_studio"]}, {"id": "video_creation", "label": "Video Creation", "fullName": "Video Creation", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["7_hermes_uses"]}, {"id": "skillification", "label": "Skillification", "fullName": "Skillification", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["7_hermes_uses"]}, {"id": "long_term_memory", "label": "Long-term Memory", "fullName": "Long-term Memory", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["obsidian_hermes"]}, {"id": "knowledge_management", "label": "Knowledge Management", "fullName": "Knowledge Management", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["obsidian_hermes"]}, {"id": "markdown", "label": "Markdown", "fullName": "Markdown", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["obsidian_hermes"]}, {"id": "self_hosting", "label": "Self-hosting", "fullName": "Self-hosting", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["coolify_vercel", "odysseus_vs_hermes"]}, {"id": "coolify", "label": "Coolify", "fullName": "Coolify", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["coolify_vercel"]}, {"id": "docker", "label": "Docker", "fullName": "Docker", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["coolify_vercel"]}, {"id": "ci_cd", "label": "CI/CD", "fullName": "CI/CD", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["coolify_vercel"]}, {"id": "postgresql", "label": "PostgreSQL", "fullName": "PostgreSQL", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["coolify_vercel"]}, {"id": "ssl", "label": "SSL", "fullName": "SSL", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["coolify_vercel"]}, {"id": "vps", "label": "VPS", "fullName": "VPS", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["coolify_vercel", "ai_content_studio"]}, {"id": "paywall", "label": "Paywall", "fullName": "Paywall", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "monetization", "label": "Monetization", "fullName": "Monetization", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "pricing", "label": "Pricing", "fullName": "Pricing", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "conversion_optimization", "label": "Conversion Optimization", "fullName": "Conversion Optimization", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "gamification", "label": "Gamification", "fullName": "Gamification", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "free_trial", "label": "Free Trial", "fullName": "Free Trial", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["paywall_50m"]}, {"id": "knowledge_graph", "label": "Knowledge Graph", "fullName": "Knowledge Graph", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_work_graph"]}, {"id": "hermes_work", "label": "Hermes Work", "fullName": "Hermes Work", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_work_graph"]}, {"id": "graph_engineer", "label": "Graph Engineer", "fullName": "Graph Engineer", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_work_graph"]}, {"id": "knowledge_organization", "label": "Knowledge Organization", "fullName": "Knowledge Organization", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_work_graph"]}, {"id": "odysseus", "label": "Odysseus", "fullName": "Odysseus", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "multi_agent", "label": "Multi-agent", "fullName": "Multi-agent", "type": "topic", "shared": true, "color": "#FFD700", "r": 15, "count": 3, "files": ["odysseus_vs_hermes", "ai_content_studio", "managing_ai_agents"]}, {"id": "skills_system", "label": "Skills System", "fullName": "Skills System", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "orchestration", "label": "Orchestration", "fullName": "Orchestration", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["odysseus_vs_hermes"]}, {"id": "autonomous_studio", "label": "Autonomous Studio", "fullName": "Autonomous Studio", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["ai_content_studio"]}, {"id": "telegram", "label": "Telegram", "fullName": "Telegram", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["ai_content_studio"]}, {"id": "api_integration", "label": "API Integration", "fullName": "API Integration", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["ai_content_studio"]}, {"id": "json", "label": "JSON", "fullName": "JSON", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["ai_content_studio"]}, {"id": "ai_agents_2026", "label": "AI Agents 2026", "fullName": "AI Agents 2026", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["managing_ai_agents"]}, {"id": "cloud_vm", "label": "Cloud VM", "fullName": "Cloud VM", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["managing_ai_agents"]}, {"id": "model_routing", "label": "Model Routing", "fullName": "Model Routing", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["managing_ai_agents"]}, {"id": "cost_optimization", "label": "Cost Optimization", "fullName": "Cost Optimization", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["managing_ai_agents", "hermes_config"]}, {"id": "self_improvement", "label": "Self-improvement", "fullName": "Self-improvement", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["managing_ai_agents"]}, {"id": "automation", "label": "Automation", "fullName": "Automation", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["managing_ai_agents"]}, {"id": "configuration", "label": "Configuration", "fullName": "Configuration", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_config"]}, {"id": "context_management", "label": "Context Management", "fullName": "Context Management", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_config"]}, {"id": "sub_agents", "label": "Sub-agents", "fullName": "Sub-agents", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_config"]}, {"id": "yolo_mode", "label": "YOLO Mode", "fullName": "YOLO Mode", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["hermes_config"]}, {"id": "payment_gateways", "label": "Payment Gateways", "fullName": "Payment Gateways", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "saas", "label": "SaaS", "fullName": "SaaS", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["payment_gateways_saas", "cold_email_saas"]}, {"id": "stripe", "label": "Stripe", "fullName": "Stripe", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "merchant_of_record", "label": "Merchant of Record", "fullName": "Merchant of Record", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "mena_payments", "label": "MENA Payments", "fullName": "MENA Payments", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "crypto", "label": "Crypto", "fullName": "Crypto", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "risk_management", "label": "Risk Management", "fullName": "Risk Management", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["payment_gateways_saas"]}, {"id": "cold_email", "label": "Cold Email", "fullName": "Cold Email", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["cold_email_saas"]}, {"id": "aida", "label": "AIDA", "fullName": "AIDA", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["cold_email_saas"]}, {"id": "email_deliverability", "label": "Email Deliverability", "fullName": "Email Deliverability", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["cold_email_saas"]}, {"id": "lead_generation", "label": "Lead Generation", "fullName": "Lead Generation", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["cold_email_saas"]}, {"id": "sales_funnel", "label": "Sales Funnel", "fullName": "Sales Funnel", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["cold_email_saas"]}, {"id": "surah_al_baqarah", "label": "Surah Al-Baqarah", "fullName": "Surah Al-Baqarah", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["surat_albaqarah_fadl", "surah_baqarah_change_life"]}, {"id": "quran", "label": "Quran", "fullName": "Quran", "type": "topic", "shared": true, "color": "#FFD700", "r": 12, "count": 2, "files": ["surat_albaqarah_fadl", "surah_baqarah_change_life"]}, {"id": "blessings", "label": "Blessings", "fullName": "Blessings", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "intercession", "label": "Intercession", "fullName": "Intercession", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "learning_stages", "label": "Learning Stages", "fullName": "Learning Stages", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "tazkiyah", "label": "Tazkiyah", "fullName": "Tazkiyah", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surat_albaqarah_fadl"]}, {"id": "yaqeen", "label": "Yaqeen", "fullName": "Yaqeen", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "paradise", "label": "Paradise", "fullName": "Paradise", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "parents", "label": "Parents", "fullName": "Parents", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surah_baqarah_change_life"]}, {"id": "gradual_learning", "label": "Gradual Learning", "fullName": "Gradual Learning", "type": "topic", "shared": false, "color": "#546E7A", "r": 9, "count": 1, "files": ["surah_baqarah_change_life"]}], "links": [{"source": "productivity_systems", "target": "productivity_systems", "type": "contains"}, {"source": "productivity_systems", "target": "systems_over_willpower", "type": "contains"}, {"source": "productivity_systems", "target": "environment_design", "type": "contains"}, {"source": "productivity_systems", "target": "process_engineering", "type": "contains"}, {"source": "productivity_systems", "target": "cognitive_load_reduction", "type": "contains"}, {"source": "productivity_systems", "target": "self_regulated_learning", "type": "contains"}, {"source": "7_hermes_uses", "target": "hermes_agent", "type": "contains"}, {"source": "7_hermes_uses", "target": "cron_jobs", "type": "contains"}, {"source": "7_hermes_uses", "target": "ai_kanban", "type": "contains"}, {"source": "7_hermes_uses", "target": "obsidian_integration", "type": "contains"}, {"source": "7_hermes_uses", "target": "second_brain", "type": "contains"}, {"source": "7_hermes_uses", "target": "task_management", "type": "contains"}, {"source": "7_hermes_uses", "target": "tailscale", "type": "contains"}, {"source": "7_hermes_uses", "target": "video_creation", "type": "contains"}, {"source": "7_hermes_uses", "target": "skillification", "type": "contains"}, {"source": "obsidian_hermes", "target": "obsidian_integration", "type": "contains"}, {"source": "obsidian_hermes", "target": "second_brain", "type": "contains"}, {"source": "obsidian_hermes", "target": "long_term_memory", "type": "contains"}, {"source": "obsidian_hermes", "target": "hermes_agent", "type": "contains"}, {"source": "obsidian_hermes", "target": "knowledge_management", "type": "contains"}, {"source": "obsidian_hermes", "target": "markdown", "type": "contains"}, {"source": "coolify_vercel", "target": "self_hosting", "type": "contains"}, {"source": "coolify_vercel", "target": "coolify", "type": "contains"}, {"source": "coolify_vercel", "target": "docker", "type": "contains"}, {"source": "coolify_vercel", "target": "ci_cd", "type": "contains"}, {"source": "coolify_vercel", "target": "postgresql", "type": "contains"}, {"source": "coolify_vercel", "target": "ssl", "type": "contains"}, {"source": "coolify_vercel", "target": "vps", "type": "contains"}, {"source": "paywall_50m", "target": "paywall", "type": "contains"}, {"source": "paywall_50m", "target": "monetization", "type": "contains"}, {"source": "paywall_50m", "target": "pricing", "type": "contains"}, {"source": "paywall_50m", "target": "conversion_optimization", "type": "contains"}, {"source": "paywall_50m", "target": "gamification", "type": "contains"}, {"source": "paywall_50m", "target": "free_trial", "type": "contains"}, {"source": "hermes_work_graph", "target": "knowledge_graph", "type": "contains"}, {"source": "hermes_work_graph", "target": "hermes_work", "type": "contains"}, {"source": "hermes_work_graph", "target": "graph_engineer", "type": "contains"}, {"source": "hermes_work_graph", "target": "second_brain", "type": "contains"}, {"source": "hermes_work_graph", "target": "knowledge_organization", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "hermes_agent", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "odysseus", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "multi_agent", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "self_hosting", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "skills_system", "type": "contains"}, {"source": "odysseus_vs_hermes", "target": "orchestration", "type": "contains"}, {"source": "ai_content_studio", "target": "multi_agent", "type": "contains"}, {"source": "ai_content_studio", "target": "autonomous_studio", "type": "contains"}, {"source": "ai_content_studio", "target": "telegram", "type": "contains"}, {"source": "ai_content_studio", "target": "tailscale", "type": "contains"}, {"source": "ai_content_studio", "target": "api_integration", "type": "contains"}, {"source": "ai_content_studio", "target": "json", "type": "contains"}, {"source": "ai_content_studio", "target": "vps", "type": "contains"}, {"source": "managing_ai_agents", "target": "multi_agent", "type": "contains"}, {"source": "managing_ai_agents", "target": "ai_agents_2026", "type": "contains"}, {"source": "managing_ai_agents", "target": "cloud_vm", "type": "contains"}, {"source": "managing_ai_agents", "target": "model_routing", "type": "contains"}, {"source": "managing_ai_agents", "target": "cost_optimization", "type": "contains"}, {"source": "managing_ai_agents", "target": "self_improvement", "type": "contains"}, {"source": "managing_ai_agents", "target": "automation", "type": "contains"}, {"source": "hermes_config", "target": "hermes_agent", "type": "contains"}, {"source": "hermes_config", "target": "configuration", "type": "contains"}, {"source": "hermes_config", "target": "context_management", "type": "contains"}, {"source": "hermes_config", "target": "sub_agents", "type": "contains"}, {"source": "hermes_config", "target": "cost_optimization", "type": "contains"}, {"source": "hermes_config", "target": "yolo_mode", "type": "contains"}, {"source": "payment_gateways_saas", "target": "payment_gateways", "type": "contains"}, {"source": "payment_gateways_saas", "target": "saas", "type": "contains"}, {"source": "payment_gateways_saas", "target": "stripe", "type": "contains"}, {"source": "payment_gateways_saas", "target": "merchant_of_record", "type": "contains"}, {"source": "payment_gateways_saas", "target": "mena_payments", "type": "contains"}, {"source": "payment_gateways_saas", "target": "crypto", "type": "contains"}, {"source": "payment_gateways_saas", "target": "risk_management", "type": "contains"}, {"source": "cold_email_saas", "target": "cold_email", "type": "contains"}, {"source": "cold_email_saas", "target": "saas", "type": "contains"}, {"source": "cold_email_saas", "target": "aida", "type": "contains"}, {"source": "cold_email_saas", "target": "email_deliverability", "type": "contains"}, {"source": "cold_email_saas", "target": "lead_generation", "type": "contains"}, {"source": "cold_email_saas", "target": "sales_funnel", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "surah_al_baqarah", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "quran", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "blessings", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "intercession", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "learning_stages", "type": "contains"}, {"source": "surat_albaqarah_fadl", "target": "tazkiyah", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "surah_al_baqarah", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "quran", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "yaqeen", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "paradise", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "parents", "type": "contains"}, {"source": "surah_baqarah_change_life", "target": "gradual_learning", "type": "contains"}, {"source": "7_hermes_uses", "target": "obsidian_hermes", "type": "shared", "topic": "Hermes Agent"}, {"source": "7_hermes_uses", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Hermes Agent"}, {"source": "7_hermes_uses", "target": "hermes_config", "type": "shared", "topic": "Hermes Agent"}, {"source": "obsidian_hermes", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Hermes Agent"}, {"source": "hermes_config", "target": "obsidian_hermes", "type": "shared", "topic": "Hermes Agent"}, {"source": "hermes_config", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Hermes Agent"}, {"source": "7_hermes_uses", "target": "hermes_work_graph", "type": "shared", "topic": "Second Brain"}, {"source": "hermes_work_graph", "target": "obsidian_hermes", "type": "shared", "topic": "Second Brain"}, {"source": "7_hermes_uses", "target": "ai_content_studio", "type": "shared", "topic": "Tailscale"}, {"source": "coolify_vercel", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Self-hosting"}, {"source": "ai_content_studio", "target": "coolify_vercel", "type": "shared", "topic": "VPS"}, {"source": "ai_content_studio", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Multi-agent"}, {"source": "managing_ai_agents", "target": "odysseus_vs_hermes", "type": "shared", "topic": "Multi-agent"}, {"source": "ai_content_studio", "target": "managing_ai_agents", "type": "shared", "topic": "Multi-agent"}, {"source": "hermes_config", "target": "managing_ai_agents", "type": "shared", "topic": "Cost Optimization"}, {"source": "cold_email_saas", "target": "payment_gateways_saas", "type": "shared", "topic": "SaaS"}, {"source": "surah_baqarah_change_life", "target": "surat_albaqarah_fadl", "type": "shared", "topic": "Surah Al-Baqarah"}]};
-const w = window.innerWidth, h = window.innerHeight;
+const data = {"name": "Knowledge Base", "emoji": "\ud83e\udde0", "color": "#FFD700", "children": [{"name": "AI & Agents", "emoji": "\ud83e\udd16", "color": "#2196F3", "children": [{"name": "7 Hermes Uses", "emoji": "\ud83e\udd16", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1JQq0t7iJQXwKlwM_9xYxdsepKRuGRRJO/view", "summary": "Seven real-world Hermes Agent use cases: cron jobs, Kanban, Obsidian, Hyperframes, Tailscale, and skillification.", "children": [{"name": "Cron Jobs", "color": "#64B5F6", "leaf": true}, {"name": "AI Kanban", "color": "#64B5F6", "leaf": true}, {"name": "Obsidian Integration", "color": "#64B5F6", "leaf": true}, {"name": "Tailscale", "color": "#64B5F6", "leaf": true}, {"name": "Hyperframes", "color": "#64B5F6", "leaf": true}, {"name": "Skillification", "color": "#64B5F6", "leaf": true}]}, {"name": "Obsidian + Hermes", "emoji": "\ud83e\udde0", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1ZpxWtSKOYDwygHV9lI12B089Xm3Ofuuv/view", "summary": "Connect Hermes Agent to Obsidian for persistent long-term memory via read/write/search/link notes.", "children": [{"name": "Second Brain", "color": "#64B5F6", "leaf": true}, {"name": "Long-term Memory", "color": "#64B5F6", "leaf": true}, {"name": "Knowledge Flywheel", "color": "#64B5F6", "leaf": true}, {"name": "Markdown KM", "color": "#64B5F6", "leaf": true}]}, {"name": "Coolify / Self-host", "emoji": "\ud83d\ude80", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1Mp6uGod7iMuaSGJbw34zuAX1JG73QiSi/view", "summary": "Self-host Coolify (open-source Vercel alternative) on a $5 VPS with CI/CD, databases, and SSL.", "children": [{"name": "Docker VPS", "color": "#64B5F6", "leaf": true}, {"name": "CI/CD", "color": "#64B5F6", "leaf": true}, {"name": "PostgreSQL", "color": "#64B5F6", "leaf": true}, {"name": "SSL", "color": "#64B5F6", "leaf": true}]}, {"name": "Paywall $50M", "emoji": "\ud83d\udcb0", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1CO2Jee1D-YNE-9sGZkPxtcplXw31n4T2/view", "summary": "Paywall strategies generating $50M+ \u2014 treat the paywall as a revenue engine, not a UI element.", "children": [{"name": "Monetization", "color": "#64B5F6", "leaf": true}, {"name": "Conversion", "color": "#64B5F6", "leaf": true}, {"name": "Pricing", "color": "#64B5F6", "leaf": true}, {"name": "Free Trial", "color": "#64B5F6", "leaf": true}]}, {"name": "Hermes Work Graph", "emoji": "\ud83d\udd17", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1l499k9vSFEfXR9-qc-hdphWAP-VuUw4O/view", "summary": "\u0627\u0633\u062a\u062e\u062f\u0627\u0645 Hermes Work \u0648\u0645\u0639 Graph Engineer \u0644\u062a\u062d\u0648\u064a\u0644 \u0627\u0644\u0645\u0644\u0627\u062d\u0638\u0627\u062a \u0625\u0644\u0649 Knowledge Graph \u0645\u0646\u0638\u0645.", "children": [{"name": "Graph Engineer", "color": "#64B5F6", "leaf": true}, {"name": "Knowledge Org", "color": "#64B5F6", "leaf": true}, {"name": "Second Brain", "color": "#64B5F6", "leaf": true}]}, {"name": "Odysseus vs Hermes", "emoji": "\u2694\ufe0f", "color": "#42A5F5", "link": "https://drive.google.com/file/d/16sFiMQsVaiiiu3BJ7nGK1oDeQuQlcRWy/view", "summary": "\u0645\u0642\u0627\u0631\u0646\u0629 Odysseus \u0648 Hermes Agent: \u0627\u0644\u0628\u0633\u0627\u0637\u0629 vs \u0627\u0644\u062a\u062e\u0635\u064a\u0635 \u0627\u0644\u0645\u062a\u0642\u062f\u0645 \u0648\u0627\u0644\u062a\u0643\u0644\u0641\u0629.", "children": [{"name": "Multi-agent", "color": "#64B5F6", "leaf": true}, {"name": "Orchestration", "color": "#64B5F6", "leaf": true}, {"name": "Self-hosting", "color": "#64B5F6", "leaf": true}]}, {"name": "AI Content Studio", "emoji": "\ud83c\udfac", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1k5VbclAIROpUiYzsV7V54sbfI_acpWV0/view", "summary": "5-agent autonomous content studio on $5 VPS controlled via Telegram with Tailscale security.", "children": [{"name": "5 Agents", "color": "#64B5F6", "leaf": true}, {"name": "Telegram UI", "color": "#64B5F6", "leaf": true}, {"name": "Tailscale", "color": "#64B5F6", "leaf": true}, {"name": "API Integration", "color": "#64B5F6", "leaf": true}]}, {"name": "Managing AI Agents", "emoji": "\ud83c\udfc6", "color": "#42A5F5", "link": "https://drive.google.com/file/d/1Zi93ODou57S32hRUoWq3m9P1QDEIhC64/view", "summary": "Managing AI agents is the 2026 most valuable skill \u2014 shipping 22-40 PRs daily as a team of one.", "children": [{"name": "Cloud VM", "color": "#64B5F6", "leaf": true}, {"name": "Model Routing", "color": "#64B5F6", "leaf": true}, {"name": "Cost Optimization", "color": "#64B5F6", "leaf": true}, {"name": "Automation", "color": "#64B5F6", "leaf": true}]}, {"name": "Hermes Config", "emoji": "\u2699\ufe0f", "color": "#42A5F5", "link": "https://drive.google.com/document/d/1M4u5tpNh05-8RpftztBd8v5RsNWK7XzapR0PMrZXqok/edit", "summary": "Optimize Hermes Agent: context limits, sub-agents, cost optimization, compression, YOLO mode.", "children": [{"name": "Sub-agents", "color": "#64B5F6", "leaf": true}, {"name": "Context Limits", "color": "#64B5F6", "leaf": true}, {"name": "YOLO Mode", "color": "#64B5F6", "leaf": true}, {"name": "Cost Opt", "color": "#64B5F6", "leaf": true}]}]}, {"name": "Productivity", "emoji": "\u26a1", "color": "#9C27B0", "children": [{"name": "Productivity Systems", "emoji": "\u26a1", "color": "#AB47BC", "link": "https://drive.google.com/file/d/1G_4j5qZ5pI8AFLQajUJArOdqnQWdBJOR/view", "summary": "Dr. Justin Sung's 4-part productivity system makes productive behavior the default path of least resistance.", "children": [{"name": "Systems over Willpower", "color": "#CE93D8", "leaf": true}, {"name": "Environment Design", "color": "#CE93D8", "leaf": true}, {"name": "Process Engineering", "color": "#CE93D8", "leaf": true}, {"name": "Cognitive Load", "color": "#CE93D8", "leaf": true}, {"name": "Self-regulated Learning", "color": "#CE93D8", "leaf": true}]}]}, {"name": "Marketing & SaaS", "emoji": "\ud83d\udcb3", "color": "#FF9800", "children": [{"name": "Payment Gateways", "emoji": "\ud83d\udcb3", "color": "#FFA726", "link": "https://drive.google.com/file/d/1ivgR_oWyHsoXDH0OjW6gg27qCHFA7UFi/view", "summary": "\u0645\u0642\u0627\u0631\u0646\u0629 13 \u0628\u0648\u0627\u0628\u0629 \u062f\u0641\u0639 SaaS \u2014 Stripe, Paddle, PayMob \u0644\u0644\u0645\u0624\u0633\u0633\u064a\u0646 \u0627\u0644\u0623\u0641\u0631\u0627\u062f \u0641\u064a \u0627\u0644\u0634\u0631\u0642 \u0627\u0644\u0623\u0648\u0633\u0637.", "children": [{"name": "Stripe", "color": "#FFCC80", "leaf": true}, {"name": "Merchant of Record", "color": "#FFCC80", "leaf": true}, {"name": "MENA Payments", "color": "#FFCC80", "leaf": true}, {"name": "Crypto", "color": "#FFCC80", "leaf": true}, {"name": "Risk Management", "color": "#FFCC80", "leaf": true}]}, {"name": "Cold Email SaaS", "emoji": "\ud83d\udce7", "color": "#FFA726", "link": "https://drive.google.com/file/d/1ed6zEFXkO2AB27FX9PgT8H1sZU_ztkUg/view", "summary": "Cold email for SaaS: AIDA/BANT frameworks, 10 templates, deliverability best practices.", "children": [{"name": "AIDA Framework", "color": "#FFCC80", "leaf": true}, {"name": "Email Deliverability", "color": "#FFCC80", "leaf": true}, {"name": "Lead Generation", "color": "#FFCC80", "leaf": true}, {"name": "Sales Funnel", "color": "#FFCC80", "leaf": true}, {"name": "10 Templates", "color": "#FFCC80", "leaf": true}]}]}, {"name": "Quran", "emoji": "\ud83d\udcd6", "color": "#4CAF50", "children": [{"name": "Surah Al-Baqarah Virtues", "emoji": "\ud83d\udcd6", "color": "#66BB6A", "link": "https://drive.google.com/file/d/1l3WGTdKRrJF0DrY7ZeL1-GglnufOvtK2/view", "summary": "\u0641\u0636\u0627\u0626\u0644 \u0633\u0648\u0631\u0629 \u0627\u0644\u0628\u0642\u0631\u0629: \u0628\u0631\u0643\u0629 \u0641\u064a \u0627\u0644\u0648\u0642\u062a \u0648\u0627\u0644\u0631\u0632\u0642 \u0648\u0627\u0644\u0623\u0647\u0644\u060c \u0648\u062d\u0633\u0631\u0629 \u062a\u0631\u0643\u0647\u0627\u060c \u0648\u0634\u0641\u064a\u0639 \u0644\u0635\u0627\u062d\u0628\u0647\u0627 \u064a\u0648\u0645 \u0627\u0644\u0642\u064a\u0627\u0645\u0629.", "children": [{"name": "Blessings Barakah", "color": "#A5D6A7", "leaf": true}, {"name": "Intercession", "color": "#A5D6A7", "leaf": true}, {"name": "Protection", "color": "#A5D6A7", "leaf": true}, {"name": "Learning Stages", "color": "#A5D6A7", "leaf": true}]}, {"name": "Baqarah Changes Life", "emoji": "\ud83d\udd4c", "color": "#66BB6A", "link": "https://drive.google.com/file/d/1qE7AiAm90lA-7YFfbosEzqBTRQq34xfb/view", "summary": "\u0645\u062d\u0627\u0636\u0631\u0629 \u0627\u0644\u0634\u064a\u062e \u0645\u062d\u0645\u062f \u0627\u0644\u063a\u0644\u064a\u062b: \u062a\u0639\u0644\u0645 \u0633\u0648\u0631\u0629 \u0627\u0644\u0628\u0642\u0631\u0629 \u062a\u062f\u0631\u064a\u062c\u064a\u0627\u064b \u0648\u0645\u0627 \u064a\u0646\u062a\u0638\u0631 \u0623\u0647\u0644\u0647\u0627 \u0645\u0646 \u062a\u0643\u0631\u064a\u0645.", "children": [{"name": "Yaqeen", "color": "#A5D6A7", "leaf": true}, {"name": "Parents Honor", "color": "#A5D6A7", "leaf": true}, {"name": "Paradise", "color": "#A5D6A7", "leaf": true}, {"name": "Gradual Learning", "color": "#A5D6A7", "leaf": true}]}]}]};
 
-const svg = d3.select("#graph").append("svg").attr("width", w).attr("height", h);
-const g = svg.append("g");
-const zoom = d3.zoom().scaleExtent([0.08, 8]).on("zoom", e => g.attr("transform", e.transform));
-svg.call(zoom);
+let scale = 1;
+let panX = 0, panY = 0;
+let isDragging = false, startX, startY;
+let layoutMode = 0; // 0: radial, 1: tree-right, 2: tree-down
 
-// Lookup maps
-const nodeMap = {};
-data.nodes.forEach(n => nodeMap[n.id] = n);
-const linkMap = {};
-data.links.forEach(l => {
-  const sid = typeof l.source === 'object' ? l.source.id : l.source;
-  const tid = typeof l.target === 'object' ? l.target.id : l.target;
-  if (!linkMap[sid]) linkMap[sid] = [];
-  if (!linkMap[tid]) linkMap[tid] = [];
-  linkMap[sid].push({target: tid, type: l.type, topic: l.topic});
-  linkMap[tid].push({target: sid, type: l.type, topic: l.topic});
-});
+const canvas = document.getElementById('canvas');
+const sidebar = document.getElementById('sidebar');
 
-const link = g.append("g").selectAll("line")
-  .data(data.links).join("line")
-  .attr("stroke", d => d.type === "shared" ? "rgba(255,215,0,0.12)" : "rgba(255,255,255,0.06)")
-  .attr("stroke-width", d => d.type === "shared" ? 1.8 : 0.8)
-  .attr("stroke-dasharray", d => d.type === "shared" ? "5,4" : "none");
+const catColors = {
+  'AI & Agents': '#2196F3',
+  'Productivity': '#9C27B0',
+  'Marketing & SaaS': '#FF9800',
+  'Quran': '#4CAF50'
+};
 
-const node = g.append("g").selectAll("g")
-  .data(data.nodes).join("g")
-  .call(d3.drag()
-    .on("start", (e,d) => { if(!e.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
-    .on("drag", (e,d) => { d.fx=e.x; d.fy=e.y; })
-    .on("end", (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }));
+// ---- LAYOUT ALGORITHMS ----
 
-node.append("circle")
-  .attr("r", d => d.r || 10)
-  .attr("fill", d => d.color)
-  .attr("stroke", d => d.type === "file" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.08)")
-  .attr("stroke-width", 1.5)
-  .attr("opacity", 0.85);
-
-node.append("text")
-  .text(d => d.emoji ? d.emoji + ' ' + d.label : d.label)
-  .attr("x", d => (d.r || 10) + 8)
-  .attr("y", 4)
-  .attr("fill", d => d.type === "file" ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.4)")
-  .attr("font-size", d => d.type === "file" ? 11 : 9)
-  .attr("font-weight", d => d.type === "file" ? 500 : 400)
-  .style("pointer-events", "none")
-  .style("text-shadow", "0 1px 4px rgba(0,0,0,0.9)");
-
-// Hover highlighting
-node.on("mouseenter", function(e, d) {
-  const connected = new Set();
-  if (linkMap[d.id]) linkMap[d.id].forEach(l => connected.add(l.target));
-  node.attr("opacity", n => n.id === d.id ? 1 : (connected.has(n.id) ? 1 : 0.12));
-  link.attr("opacity", l => {
-    const sid = typeof l.source === 'object' ? l.source.id : l.source;
-    const tid = typeof l.target === 'object' ? l.target.id : l.target;
-    if (sid === d.id || tid === d.id) return 0.6;
-    if (connected.has(sid) && connected.has(tid)) return 0.3;
-    return 0.04;
-  });
-}).on("mouseleave", function() {
-  node.attr("opacity", 0.85);
-  link.attr("opacity", l => l.type === "shared" ? 0.3 : 0.15);
-}).on("click", function(e, d) { openSidebar(d); });
-
-// Force simulation
-const sim = d3.forceSimulation(data.nodes)
-  .force("link", d3.forceLink(data.links).id(d => d.id).distance(d => d.type === "shared" ? 50 : 80))
-  .force("charge", d3.forceManyBody().strength(d => d.type === "file" ? -180 : -80))
-  .force("center", d3.forceCenter(w/2, h/2))
-  .force("collision", d3.forceCollide().radius(d => (d.r||10) + 12))
-  .on("tick", () => {
-    link.attr("x1", d=>d.source.x).attr("y1", d=>d.source.y).attr("x2", d=>d.target.x).attr("y2", d=>d.target.y);
-    node.attr("transform", d=>"translate("+d.x+","+d.y+")");
-  });
-
-// ===== INTERACTIVITY =====
-
-function filterGraph(q) {
-  const ql = q.toLowerCase();
-  node.style("opacity", d => {
-    if (!ql) return 1;
-    const match = (d.fullName && d.fullName.toLowerCase().includes(ql)) ||
-                  (d.label && d.label.toLowerCase().includes(ql)) ||
-                  (d.topics && d.topics.some(t => t.toLowerCase().includes(ql))) ||
-                  (d.id && d.id.toLowerCase().includes(ql));
-    return match ? 1 : 0.05;
-  });
-  link.style("opacity", l => {
-    if (!ql) return l.type === "shared" ? 0.3 : 0.15;
-    const sid = typeof l.source === 'object' ? l.source.id : l.source;
-    const tid = typeof l.target === 'object' ? l.target.id : l.target;
-    const s = nodeMap[sid], t = nodeMap[tid];
-    const inQ = n => n && ((n.fullName && n.fullName.toLowerCase().includes(ql)) || (n.label && n.label.toLowerCase().includes(ql)));
-    return (s && t && (inQ(s) || inQ(t))) ? 0.5 : 0.02;
-  });
+function getRadialPos(angle, radius) {
+  return {
+    x: window.innerWidth/2 + Math.cos(angle) * radius,
+    y: window.innerHeight/2 + Math.sin(angle) * radius
+  };
 }
 
-function filterCategory(cat) {
-  document.querySelectorAll('.filters button').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
-  node.style("opacity", d => {
-    if (cat === "all") return 1;
-    if (cat === "shared") return d.shared ? 1 : (d.type === "file" ? 1 : 0.05);
-    return d.category === cat ? 1 : 0.05;
-  });
-  link.style("opacity", l => {
-    if (cat === "all") return l.type === "shared" ? 0.3 : 0.15;
-    const sid = typeof l.source === 'object' ? l.source.id : l.source;
-    const tid = typeof l.target === 'object' ? l.target.id : l.target;
-    const s = nodeMap[sid], t = nodeMap[tid];
-    const sVis = s && (cat === "shared" ? true : (s.category === cat || s.shared));
-    const tVis = t && (cat === "shared" ? true : (t.category === cat || t.shared));
-    return sVis && tVis ? (l.type === "shared" ? 0.4 : 0.2) : 0.02;
-  });
+function getTreeRightPos(depth, index, totalInLevel) {
+  const startX = 80;
+  const startY = window.innerHeight/2;
+  const xSpacing = 260;
+  const ySpacing = 50;
+  return {
+    x: startX + depth * xSpacing,
+    y: startY + (index - (totalInLevel-1)/2) * ySpacing
+  };
 }
 
-function openSidebar(d) {
-  const sb = document.getElementById('sidebar');
-  document.getElementById('sb-type').textContent = d.type === "file" ? "\uD83D\uDCC4 File" : "\uD83C\uDFF7\uFE0F Concept";
-  document.getElementById('sb-title').textContent = (d.emoji || '') + ' ' + d.fullName;
-  document.getElementById('sb-category').textContent = d.category || '';
+function getTreeDownPos(depth, index, totalInLevel) {
+  const startX = window.innerWidth/2;
+  const startY = 60;
+  const xSpacing = 180;
+  const ySpacing = 90;
+  return {
+    x: startX + (index - (totalInLevel-1)/2) * xSpacing,
+    y: startY + depth * ySpacing
+  };
+}
 
-  const summaryEl = document.getElementById('sb-summary');
-  if (d.type === "file" && d.summary) {
-    summaryEl.textContent = d.summary;
-    summaryEl.style.display = 'block';
-  } else if (d.type === "topic") {
-    const cnt = d.count || 0;
-    summaryEl.textContent = cnt > 1 ? "This concept appears in " + cnt + " files, creating a knowledge bridge." : "This concept appears in 1 file.";
-    summaryEl.style.display = 'block';
+function layout(node, depth, angleStart, angleEnd, parentPos, result) {
+  if (!node) return;
+  
+  const id = node.name;
+  const cx = window.innerWidth/2;
+  const cy = window.innerHeight/2;
+  
+  let pos;
+  
+  if (depth === 0) {
+    // Center
+    pos = { x: cx, y: cy };
+  } else if (layoutMode === 0) {
+    // Radial layout
+    const midAngle = (angleStart + angleEnd) / 2;
+    const radius = 80 + depth * 160;
+    pos = getRadialPos(midAngle, radius);
+  } else if (layoutMode === 1) {
+    // Tree right
+    const total = node.children ? node.children.length : 1;
+    pos = getTreeRightPos(depth, 0, 1);
   } else {
-    summaryEl.style.display = 'none';
+    // Tree down
+    const total = node.children ? node.children.length : 1;
+    pos = getTreeDownPos(depth, 0, 1);
   }
-
-  const topicsSection = document.getElementById('sb-topics-section');
-  const topicsEl = document.getElementById('sb-topics');
-  if (d.type === "file" && d.topics && d.topics.length) {
-    topicsSection.style.display = 'block';
-    topicsEl.innerHTML = d.topics.map(t => {
-      const slug = t.toLowerCase().replace(/ /g,'_').replace(/[\/\-']/g,'').substring(0,50);
-      return '<span class="sb-topic" onclick="highlightTopic(\'' + slug + '\')">' + t + '</span>';
-    }).join('');
-  } else {
-    topicsSection.style.display = 'none';
+  
+  result.push({
+    id: id,
+    node: node,
+    x: pos.x,
+    y: pos.y,
+    depth: depth,
+    parentPos: parentPos,
+    type: depth === 0 ? 'center' : 
+          depth === 1 ? 'category' : 
+          node.leaf ? 'leaf' : 'file'
+  });
+  
+  if (node.children) {
+    const count = node.children.length;
+    if (layoutMode === 0) {
+      const range = angleEnd - angleStart;
+      const padding = 0.15 * range / count;
+      const step = (range - 2 * padding) / Math.max(count, 1);
+      node.children.forEach((child, i) => {
+        const childStart = angleStart + padding + i * step;
+        const childEnd = childStart + step * 0.8;
+        layout(child, depth + 1, childStart, childEnd, pos, result);
+      });
+    } else if (layoutMode === 1) {
+      const totalInLevel = count;
+      node.children.forEach((child, i) => {
+        const p = getTreeRightPos(depth + 1, i, totalInLevel);
+        result.push({
+          id: child.name,
+          node: child,
+          x: p.x + (parentPos ? parentPos.x - p.x : -260),
+          y: p.y,
+          depth: depth + 1,
+          parentPos: pos,
+          type: depth === 0 ? 'category' : child.leaf ? 'leaf' : 'file'
+        });
+        if (child.children) {
+          child.children.forEach((gc, j) => {
+            const gp = getTreeRightPos(depth + 2, j, child.children.length);
+            result.push({
+              id: gc.name,
+              node: gc,
+              x: gp.x + (p.x - gp.x),
+              y: gp.y,
+              depth: depth + 2,
+              parentPos: { x: p.x, y: p.y },
+              type: 'leaf'
+            });
+          });
+        }
+      });
+    } else {
+      node.children.forEach((child, i) => {
+        const p = getTreeDownPos(depth + 1, i, count);
+        result.push({
+          id: child.name,
+          node: child,
+          x: p.x,
+          y: p.y + (parentPos ? parentPos.y - p.y : -90),
+          depth: depth + 1,
+          parentPos: pos,
+          type: child.leaf ? 'leaf' : 'file'
+        });
+        if (child.children) {
+          child.children.forEach((gc, j) => {
+            const gp = getTreeDownPos(depth + 2, j, child.children.length);
+            result.push({
+              id: gc.name,
+              node: gc,
+              x: gp.x,
+              y: gp.y + (p.y - gp.y),
+              depth: depth + 2,
+              parentPos: { x: p.x, y: p.y },
+              type: 'leaf'
+            });
+          });
+        }
+      });
+    }
   }
+}
 
-  const filesSection = document.getElementById('sb-files-section');
-  const filesEl = document.getElementById('sb-files');
-  if (d.type === "topic" && d.files && d.files.length) {
-    filesSection.style.display = 'block';
-    filesEl.innerHTML = d.files.map(fid => {
-      const f = nodeMap[fid];
-      return f ? '<div class="sb-related-item" onclick="highlightFile(\'' + fid + '\')">\uD83D\uDCC4 ' + f.fullName + '</div>' : '';
-    }).join('');
-  } else {
-    filesSection.style.display = 'none';
-  }
-
-  const relatedSection = document.getElementById('sb-related-section');
-  const relatedEl = document.getElementById('sb-related');
-  if (d.type === "file" && linkMap[d.id]) {
-    const seen = new Set();
-    const related = [];
-    linkMap[d.id].forEach(l => {
-      if (l.type === "shared" && !seen.has(l.target)) {
-        seen.add(l.target);
-        const fn = nodeMap[l.target];
-        if (fn && fn.type === "file") related.push(fn);
+function render() {
+  canvas.innerHTML = '';
+  
+  const nodes = [];
+  layout(data, 0, -Math.PI, Math.PI, null, nodes);
+  
+  // Filter out duplicates (nested layout adds children separately)
+  const unique = {};
+  nodes.forEach(n => { unique[n.id] = n; });
+  const allNodes = Object.values(unique);
+  
+  // Draw lines first
+  allNodes.forEach(n => {
+    if (n.parentPos) {
+      const line = document.createElement('div');
+      line.className = 'mm-line';
+      
+      const x1 = n.x, y1 = n.y;
+      const x2 = n.parentPos.x, y2 = n.parentPos.y;
+      const dx = x2 - x1, dy = y2 - y1;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      
+      line.style.cssText = `
+        width: ${len}px;
+        height: 2px;
+        left: ${x1}px;
+        top: ${y1 - 1}px;
+        transform: rotate(${angle}deg);
+        transform-origin: 0 50%;
+        background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,${0.06 + n.depth * 0.03}));
+      `;
+      canvas.appendChild(line);
+    }
+  });
+  
+  // Draw nodes
+  allNodes.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'mm-node ' + n.type;
+    
+    let bgColor, borderColor, textColor;
+    
+    if (n.type === 'center') {
+      bgColor = 'rgba(255,215,0,0.12)';
+      borderColor = 'rgba(255,215,0,0.3)';
+      textColor = '#FFD700';
+    } else if (n.type === 'category') {
+      bgColor = n.node.color + '22';
+      borderColor = n.node.color + '44';
+      textColor = n.node.color;
+    } else if (n.type === 'file') {
+      bgColor = n.node.color + '18';
+      borderColor = n.node.color + '33';
+      textColor = '#ccc';
+    } else {
+      bgColor = 'rgba(255,255,255,0.03)';
+      borderColor = 'rgba(255,255,255,0.08)';
+      textColor = '#888';
+    }
+    
+    el.style.cssText = `
+      left: ${n.x}px; top: ${n.y}px;
+      background: ${bgColor};
+      border-color: ${borderColor};
+      color: ${textColor};
+      transform: translate(-50%, -50%) scale(1);
+    `;
+    
+    const emoji = n.node.emoji ? '<span class="emoji">' + n.node.emoji + '</span> ' : '';
+    el.innerHTML = emoji + n.node.name;
+    
+    // Click to show sidebar
+    if (n.type !== 'center' && n.type !== 'leaf') {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showSidebar(n.node, n.type);
+      });
+    }
+    
+    el.addEventListener('mouseenter', function() {
+      if (!isDragging) {
+        this.style.transform = 'translate(-50%, -50%) scale(1.08)';
+        this.style.zIndex = '10';
       }
     });
-    if (related.length) {
-      relatedSection.style.display = 'block';
-      relatedEl.innerHTML = related.map(r => '<div class="sb-related-item" onclick="highlightFile(\'' + r.id + '\')">\uD83D\uDD17 ' + r.fullName + '</div>').join('');
-    } else {
-      relatedSection.style.display = 'none';
-    }
-  } else {
-    relatedSection.style.display = 'none';
-  }
-
-  const driveSection = document.getElementById('sb-drive-section');
-  const driveEl = document.getElementById('sb-drive');
-  if (d.type === "file" && d.driveUrl) {
-    driveSection.style.display = 'block';
-    driveEl.href = d.driveUrl;
-  } else {
-    driveSection.style.display = 'none';
-  }
-  sb.classList.add('open');
+    el.addEventListener('mouseleave', function() {
+      this.style.transform = 'translate(-50%, -50%) scale(1)';
+      this.style.zIndex = '1';
+    });
+    
+    canvas.appendChild(el);
+  });
+  
+  applyTransform();
 }
 
-function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); }
-
-function highlightTopic(slug) {
-  filterCategory('all');
-  const q = document.getElementById('search');
-  const target = nodeMap[slug];
-  q.value = target ? target.fullName : slug;
-  filterGraph(q.value);
-  closeSidebar();
+function showSidebar(node, type) {
+  document.getElementById('sbTitle').textContent = (node.emoji || '') + ' ' + node.name;
+  document.getElementById('sbSub').textContent = type === 'category' ? 'Category' : 'File';
+  document.getElementById('sbSummary').textContent = node.summary || '';
+  
+  const linkArea = document.getElementById('sbLinkArea');
+  if (node.link) {
+    linkArea.innerHTML = '<a class="sb-link" href="' + node.link + '" target="_blank">↗ Open in Google Drive</a>';
+  } else {
+    linkArea.innerHTML = '';
+  }
+  
+  sidebar.classList.add('open');
 }
 
-function highlightFile(fid) {
-  filterCategory('all');
-  const f = nodeMap[fid];
-  if (f) {
-    const q = document.getElementById('search');
-    q.value = f.fullName;
-    filterGraph(f.fullName);
-    openSidebar(f);
-  }
+function closeSidebar() {
+  sidebar.classList.remove('open');
+}
+
+function zoomIn() {
+  scale = Math.min(scale * 1.25, 3);
+  applyTransform();
+}
+
+function zoomOut() {
+  scale = Math.max(scale / 1.25, 0.2);
+  applyTransform();
+}
+
+function applyTransform() {
+  canvas.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + scale + ')';
+  document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
 }
 
 function resetView() {
-  document.getElementById('search').value = '';
-  filterGraph('');
-  filterCategory('all');
-  document.querySelectorAll('.filters button')[0].classList.add('active');
-  closeSidebar();
-  svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+  scale = 1;
+  panX = 0;
+  panY = 0;
+  applyTransform();
 }
 
-// Initial opacity
-link.attr("opacity", l => l.type === "shared" ? 0.3 : 0.15);
+function toggleLayout() {
+  layoutMode = (layoutMode + 1) % 3;
+  render();
+}
+
+// Canvas pan via drag
+canvas.addEventListener('mousedown', (e) => {
+  if (e.target === canvas || e.target.classList.contains('mm-line')) {
+    isDragging = true;
+    startX = e.clientX - panX;
+    startY = e.clientY - panY;
+  }
+});
+window.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    panX = e.clientX - startX;
+    panY = e.clientY - startY;
+    applyTransform();
+  }
+});
+window.addEventListener('mouseup', () => { isDragging = false; });
+
+// Touch support
+let touchStartX, touchStartY, touchDist = 0;
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    touchStartX = e.touches[0].clientX - panX;
+    touchStartY = e.touches[0].clientY - panY;
+  } else if (e.touches.length === 2) {
+    touchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+  }
+});
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    panX = e.touches[0].clientX - touchStartX;
+    panY = e.touches[0].clientY - touchStartY;
+    applyTransform();
+  } else if (e.touches.length === 2) {
+    const newDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    scale *= newDist / touchDist;
+    touchDist = newDist;
+    applyTransform();
+  }
+}, { passive: false });
+
+// Mouse wheel zoom
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  scale = Math.max(0.2, Math.min(3, scale * delta));
+  applyTransform();
+}, { passive: false });
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'r' || e.key === 'R') resetView();
+  if (e.key === 'l' || e.key === 'L') toggleLayout();
+  if (e.key === 'Escape') closeSidebar();
+});
+
+// Resize handler
+window.addEventListener('resize', () => { render(); });
+
+// Init
+render();
 </script>
 </body>
 </html>
